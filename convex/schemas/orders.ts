@@ -40,7 +40,7 @@ export const orderItemFields = {
     // Snapshot of the product data at time of order
     label: v.string(),
     code: v.string(),
-    product_type: v.union(v.literal('product'), v.literal('service')),
+    product_type: v.id('product_types'),
 
     // Money
     quantity: v.number(),
