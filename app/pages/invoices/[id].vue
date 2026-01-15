@@ -102,7 +102,7 @@ async function handleDownloadPdf() {
             </div>
 
             <div>
-                <v-btn variant="outlined" color="primary" class="mr-2" :loading="isRequesting"
+                <v-btn variant="outlined" color="primary" class="mr-2" :loading="invoice.pdf_status === 'generating'"
                     @click="handleDownloadPdf">
                     <v-icon start>mdi-file-pdf-box</v-icon>
                     PDF

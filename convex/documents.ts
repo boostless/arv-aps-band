@@ -158,50 +158,119 @@ export const generatePdfAction = action({
 });
 
 // Handover Act Generation (Placeholder - you can update this to use settings later too)
-export const generateHandoverAct = action({
+export const saveActPdfUrl = internalMutation({
+    args: {
+        orderId: v.id("orders"),
+        url: v.string(),
+        status: v.string()
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.orderId, {
+            act_pdf_url: args.url,
+            act_pdf_status: args.status
+        });
+    }
+});
+
+// 2. TRIGGER MUTATION (Frontend calls this)
+export const requestHandoverAct = mutation({
     args: {
         orderId: v.id("orders"),
         gotenbergUrl: v.string(),
     },
     handler: async (ctx, args) => {
-        // Fetch Settings
-        const settings = await ctx.runQuery(api.settings.get);
-        if (!settings?.act_template_id) {
-            throw new Error("No Act template found in Settings");
-        }
+        // Update UI state immediately
+        await ctx.db.patch(args.orderId, { act_pdf_status: "generating" });
 
-        const order = await ctx.runQuery(api.orders.get, { id: args.orderId });
-        if (!order) throw new Error("Order not found");
+        // Schedule background work
+        await ctx.scheduler.runAfter(0, api.documents.generateHandoverActAction, args);
+    }
+});
 
-        const templateData = {
-            contract_number: order.contract_number,
-            date: new Date().toLocaleDateString('lt-LT'),
-            customer_name: order.customer?.label,
-            
-            // ✅ ADDED NOTES HERE
-            // Make sure your .docx template has a {notes} tag to display this
-            notes: order.notes || "", 
+// 3. WORKER ACTION (Runs in background)
+export const generateHandoverActAction = action({
+    args: {
+        orderId: v.id("orders"),
+        gotenbergUrl: v.string(),
+    },
+    handler: async (ctx, args) => {
+        try {
+            // A. Fetch Settings
+            const settings = await ctx.runQuery(api.settings.get);
+            if (!settings?.act_template_id) throw new Error("No Act template in Settings");
 
-            items: order.items
+            // B. Fetch Order
+            const order = await ctx.runQuery(api.orders.get, { id: args.orderId });
+            if (!order) throw new Error("Order not found");
+
+            // C. Calculate Items & Weight
+            let totalWeight = 0;
+
+            const mappedItems = order.items
                 .filter((i: any) => i.product_type === 'product')
-                .map((i: any) => ({
-                    label: i.label,
-                    qty: i.quantity,
-                    code: i.code
-                })),
-            total_items: order.items.length
-        };
+                .map((i: any) => {
+                    // Safe access to weight (default to 0 if missing)
+                    const unitWeight = Number(i.weight) || 0;
+                    
+                    // Add to total: quantity * unit weight
+                    totalWeight += (unitWeight * i.quantity);
 
-        const templateUrl = await ctx.storage.getUrl(settings.act_template_id);
-        if (!templateUrl) throw new Error("Template not found");
+                    return {
+                        label: i.label,
+                        qty: i.quantity,
+                        code: i.code,
+                        weight: unitWeight.toFixed(2), // Formatted unit weight
+                    };
+                });
 
-        const templateRes = await fetch(templateUrl);
-        const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
-        const pdfBuffer = await convertToPdf(filledDocx, args.gotenbergUrl);
+            // D. Prepare Template Data
+            const templateData = {
+                contract_number: order.contract_number,
+                date: new Date().toLocaleDateString('lt-LT'),
+                
+                // Customer Details
+                customer_name: order.customer?.label || "",
+                customer_phone: order.customer?.phone || "", // ✅ Added Phone
+                
+                // ✅ Fix: Ensure notes is empty string if undefined
+                notes: order.notes || "", 
 
-        const storageId = await ctx.storage.store(new Blob([pdfBuffer], { type: "application/pdf" }));
+                // Item List
+                items: mappedItems,
+                
+                // Totals
+                total_items: mappedItems.length,
+                total_weight: totalWeight.toFixed(2) // ✅ Added Total Weight
+            };
 
-        return await ctx.storage.getUrl(storageId);
+            // E. Generate PDF
+            const templateUrl = await ctx.storage.getUrl(settings.act_template_id);
+            if (!templateUrl) throw new Error("Template URL invalid");
+
+            const templateRes = await fetch(templateUrl);
+            const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
+            const pdfBuffer = await convertToPdf(filledDocx, args.gotenbergUrl);
+
+            // F. Save to Storage
+            const storageId = await ctx.storage.store(new Blob([pdfBuffer], { type: "application/pdf" }));
+            const publicUrl = await ctx.storage.getUrl(storageId);
+
+            // G. Save Result to DB
+            await ctx.runMutation(internal.documents.saveActPdfUrl, {
+                orderId: args.orderId,
+                url: publicUrl!,
+                status: "ready"
+            });
+
+        } catch (err: any) {
+            console.error("Act Generation Error:", err);
+            // H. Save Failure
+            await ctx.runMutation(internal.documents.saveActPdfUrl, {
+                orderId: args.orderId,
+                url: "",
+                status: "failed"
+            });
+        }
     }
 });
 // ----------------------------------------------------------------------

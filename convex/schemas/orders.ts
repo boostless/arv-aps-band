@@ -26,6 +26,9 @@ export const orderFields = {
     // Audit
     created_by: v.optional(v.string()), // User name
     notes: v.optional(v.string()),
+
+    act_pdf_url: v.optional(v.string()),
+    act_pdf_status: v.optional(v.string()), // 'generating', 'ready', 'failed'
 };
 
 export const orderItemFields = {

@@ -145,6 +145,32 @@ async function handleGenerateInvoice() {
     }
 }
 
+const { mutate: requestAct, isPending: isRequestingAct } = useConvexMutation(api.documents.requestHandoverAct);
+
+const GOTENBERG_URL = "https://gotenberg-cwogc8ggs84gsogsw4440c4g.fuksus.lt";
+
+async function handleGenerateAct() {
+    // 1. If PDF exists, open it
+    if (contract.value?.act_pdf_url) {
+        window.open(contract.value.act_pdf_url, '_blank');
+        return;
+    }
+    
+    // 2. If already generating, stop
+    if (contract.value?.act_pdf_status === 'generating') return;
+
+    // 3. Trigger Generation
+    try {
+        await requestAct({
+            orderId: orderId,
+            gotenbergUrl: GOTENBERG_URL
+        });
+        showToast('Handover Act generation started...', 'success');
+    } catch (err: any) {
+        showToast(err.message, 'error');
+    }
+}
+
 const payDialog = ref(false);
 const selectedInvoice = ref<any>(null);
 
@@ -193,6 +219,10 @@ const invoiceHeaders = [
                 <v-btn color="success" variant="flat" prepend-icon="mdi-check-circle-outline" :loading="isCompleting"
                     @click="handleComplete">
                     Užbaigti užsakymą
+                </v-btn>
+                <v-btn color="secondary" variant="outlined" prepend-icon="mdi-file-sign" class="ml-2"
+                    :loading="contract.act_pdf_status === 'generating' || isRequestingAct" @click="handleGenerateAct">
+                    Handover Act
                 </v-btn>
             </div>
         </div>
