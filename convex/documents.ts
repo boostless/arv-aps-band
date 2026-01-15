@@ -10,6 +10,26 @@ import { calculateInvoicePeriodCosts } from "./invoices";
 // 1. HELPERS (Internal Query & Mutation)
 // ----------------------------------------------------------------------
 
+export const getProductWeights = internalQuery({
+    // ✅ FIX: Use v.string() so it doesn't crash on "order_items" IDs
+    args: { productIds: v.array(v.string()) },
+    handler: async (ctx, args) => {
+        const products = [];
+        for (const idStr of args.productIds) {
+            // ✅ FIX: Check if this string is a valid ID for "products" table
+            const productId = ctx.db.normalizeId("products", idStr);
+
+            if (productId) {
+                const p = await ctx.db.get(productId);
+                if (p) {
+                    products.push({ id: idStr, weight: p.weight_g || 0 }); // Use original ID string for mapping
+                }
+            }
+        }
+        return products;
+    }
+});
+
 // Internal Query: Calculates costs (callable by Action)
 export const calculateBreakdown = internalQuery({
     args: { orderId: v.id("orders"), start: v.number(), end: v.number() },
@@ -195,55 +215,58 @@ export const generateHandoverActAction = action({
     },
     handler: async (ctx, args) => {
         try {
-            // A. Fetch Settings
             const settings = await ctx.runQuery(api.settings.get);
             if (!settings?.act_template_id) throw new Error("No Act template in Settings");
 
-            // B. Fetch Order
             const order = await ctx.runQuery(api.orders.get, { id: args.orderId });
             if (!order) throw new Error("Order not found");
 
-            // C. Calculate Items & Weight
+            const physicalItems = order.items.filter((i: any) => i.product_type === 'product');
+
+            // ✅ FIX: Try 'product' AND 'product_id'
+            // We cast to string because our helper now accepts strings
+            const productIds = physicalItems.map((i: any) =>
+                (i.product || i.product_id || i._id) as string
+            );
+
+            // Fetch real weights
+            const productWeights = await ctx.runQuery(internal.documents.getProductWeights, {
+                productIds: productIds
+            });
+
+            // Map: { "productId": 15.5 }
+            const weightMap = new Map();
+            productWeights.forEach((p: any) => weightMap.set(p.id, p.weight * 0.001)); // Convert g to kg
+
             let totalWeight = 0;
 
-            const mappedItems = order.items
-                .filter((i: any) => i.product_type === 'product')
-                .map((i: any) => {
-                    // Safe access to weight (default to 0 if missing)
-                    const unitWeight = Number(i.weight) || 0;
-                    
-                    // Add to total: quantity * unit weight
-                    totalWeight += (unitWeight * i.quantity);
+            const mappedItems = physicalItems.map((i: any) => {
+                // Determine which ID was used to fetch the weight
+                const idUsed = (i.product || i.product_id || i._id) as string;
+                const realWeight = weightMap.get(idUsed) || 0;
 
-                    return {
-                        label: i.label,
-                        qty: i.quantity,
-                        code: i.code,
-                        weight: unitWeight.toFixed(2), // Formatted unit weight
-                    };
-                });
+                totalWeight += (realWeight * i.quantity);
 
-            // D. Prepare Template Data
+                return {
+                    label: i.label,
+                    qty: i.quantity,
+                    code: i.code,
+                    weight: realWeight.toFixed(2),
+                };
+            });
+
             const templateData = {
                 contract_number: order.contract_number,
                 date: new Date().toLocaleDateString('lt-LT'),
-                
-                // Customer Details
                 customer_name: order.customer?.label || "",
-                customer_phone: order.customer?.phone || "", // ✅ Added Phone
-                
-                // ✅ Fix: Ensure notes is empty string if undefined
-                notes: order.notes || "", 
-
-                // Item List
+                customer_phone: order.customer?.phone || "",
+                notes: order.notes || "",
                 items: mappedItems,
-                
-                // Totals
                 total_items: mappedItems.length,
-                total_weight: totalWeight.toFixed(2) // ✅ Added Total Weight
+                total_weight: totalWeight.toFixed(2)
             };
 
-            // E. Generate PDF
+            // ... (PDF Generation Logic remains the same) ...
             const templateUrl = await ctx.storage.getUrl(settings.act_template_id);
             if (!templateUrl) throw new Error("Template URL invalid");
 
@@ -251,11 +274,9 @@ export const generateHandoverActAction = action({
             const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
             const pdfBuffer = await convertToPdf(filledDocx, args.gotenbergUrl);
 
-            // F. Save to Storage
             const storageId = await ctx.storage.store(new Blob([pdfBuffer], { type: "application/pdf" }));
             const publicUrl = await ctx.storage.getUrl(storageId);
 
-            // G. Save Result to DB
             await ctx.runMutation(internal.documents.saveActPdfUrl, {
                 orderId: args.orderId,
                 url: publicUrl!,
@@ -264,7 +285,6 @@ export const generateHandoverActAction = action({
 
         } catch (err: any) {
             console.error("Act Generation Error:", err);
-            // H. Save Failure
             await ctx.runMutation(internal.documents.saveActPdfUrl, {
                 orderId: args.orderId,
                 url: "",
