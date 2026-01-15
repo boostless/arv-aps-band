@@ -100,27 +100,12 @@ export const generatePdfAction = action({
                 end: invoice.end_date
             });
 
-            // D. Grouping Logic
-            const pdfLineItems = [];
-            let productTotal = 0;
-
-            for (const item of breakdown.lineItems) {
-                if (item.type === 'service') {
-                    pdfLineItems.push({
-                        label: item.label,
-                        total: (item.amount / 100).toFixed(2)
-                    });
-                } else {
-                    productTotal += item.amount;
-                }
-            }
-
-            if (productTotal > 0) {
-                pdfLineItems.push({
-                    label: "Pastolių nuoma",
-                    total: (productTotal / 100).toFixed(2)
-                });
-            }
+            // D. Prepare Line Items for PDF
+            // Show all items individually with their actual amounts
+            const pdfLineItems = breakdown.lineItems.map(item => ({
+                label: item.label,
+                total: (item.amount / 100).toFixed(2)
+            }));
 
             // E. Prepare Template Data
             const templateData = {
@@ -315,7 +300,9 @@ async function fillTemplate(templateBuffer: ArrayBuffer, data: any) {
 
 async function convertToPdf(docxBuffer: Uint8Array, gotenbergUrl: string) {
     const formData = new FormData();
-    const blob = new Blob([docxBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    // Convert Uint8Array to proper ArrayBuffer for Blob
+    const arrayBuffer = docxBuffer.buffer.slice(docxBuffer.byteOffset, docxBuffer.byteOffset + docxBuffer.byteLength) as ArrayBuffer;
+    const blob = new Blob([arrayBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
     formData.append("files", blob, "document.docx");
 
     // ✅ NEW: Get credentials from Environment Variables

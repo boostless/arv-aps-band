@@ -24,7 +24,7 @@ export async function calculateInvoicePeriodCosts(
 
     const items = await ctx.db
         .query("order_items")
-        .withIndex("by_order", q => q.eq("order_id", orderId))
+        .withIndex("by_order", (q: any) => q.eq("order_id", orderId))
         .collect();
 
     const oneDayMs = 1000 * 60 * 60 * 24;
@@ -35,6 +35,7 @@ export async function calculateInvoicePeriodCosts(
 
     for (const item of items) {
         let lineTotal = 0;
+        let effectiveQuantity = item.quantity;
 
         // A. Fixed Items (Services/Sales)
         // Check if the service falls within this invoice period (usually strictly once per order)
@@ -49,8 +50,8 @@ export async function calculateInvoicePeriodCosts(
             let activeDays = 0;
             for (let d = start; d <= end; d += oneDayMs) {
                 const returnsBeforeToday = (item.return_history || [])
-                    .filter(ret => ret.date < d)
-                    .reduce((sum, ret) => sum + ret.qty, 0);
+                    .filter((ret: any) => ret.date < d)
+                    .reduce((sum: number, ret: any) => sum + ret.qty, 0);
 
                 const activeQty = Math.max(0, item.quantity - returnsBeforeToday);
                 if (activeQty > 0) activeDays += activeQty; // Accumulate "Item-Days"
@@ -59,13 +60,17 @@ export async function calculateInvoicePeriodCosts(
             // Cost = Total Active Item-Days * Daily Price
             const dailyPrice = item.price * (1 - (item.discount / 100));
             lineTotal = activeDays * dailyPrice;
+            effectiveQuantity = activeDays; // For rental, quantity is item-days
         }
 
         if (lineTotal > 0) {
             lineItems.push({
                 label: item.label,
                 type: item.product_type, // 'product' or 'service'
-                amount: lineTotal
+                quantity: effectiveQuantity,
+                price: item.price,
+                discount: item.discount || 0,
+                amount: Math.round(lineTotal)
             });
         }
     }
@@ -193,12 +198,21 @@ export const get = query({
             customer = await ctx.db.get(order.customer);
         }
 
+        // 4. Calculate line items breakdown for display
+        const breakdown = await calculateInvoicePeriodCosts(
+            ctx,
+            invoice.order_id,
+            invoice.start_date,
+            invoice.end_date
+        );
+
         return {
             ...invoice,
             payments,
             paidAmount,
-            settings, // <--- Now available in frontend
-            customer  // <--- Now available in frontend
+            settings,
+            customer,
+            lineItems: breakdown.lineItems // Add detailed line items
         };
     }
 });

@@ -269,7 +269,7 @@ function removeEmployee(index: number) {
                                     <v-file-input label="Select .docx file" accept=".docx" variant="outlined"
                                         density="compact" prepend-icon="" prepend-inner-icon="mdi-paperclip"
                                         :loading="isUploading"
-                                        @update:model-value="(files) => { if (files) handleFileUpload(Array.isArray(files) ? files[0] : files, 'invoice') }"></v-file-input>
+                                        @update:model-value="(files) => { if (files) { const file = Array.isArray(files) ? files[0] : files; if (file) handleFileUpload(file, 'invoice'); } }"></v-file-input>
 
                                     <div v-if="form.invoice_template_id"
                                         class="d-flex align-center text-caption text-success mt-n2">
@@ -289,7 +289,7 @@ function removeEmployee(index: number) {
                                     <v-file-input label="Select .docx file" accept=".docx" variant="outlined"
                                         density="compact" prepend-icon="" prepend-inner-icon="mdi-paperclip"
                                         :loading="isUploading"
-                                        @update:model-value="(files) => { if (files) handleFileUpload(Array.isArray(files) ? files[0] : files, 'act') }"></v-file-input>
+                                        @update:model-value="(files) => { if (files) { const file = Array.isArray(files) ? files[0] : files; if (file) handleFileUpload(file, 'act'); } }"></v-file-input>
 
                                     <div v-if="form.act_template_id"
                                         class="d-flex align-center text-caption text-success mt-n2">

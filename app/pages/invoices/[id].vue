@@ -174,18 +174,30 @@ async function handleDownloadPdf() {
                 <thead>
                     <tr>
                         <th class="text-left font-weight-bold">Description</th>
+                        <th class="text-center font-weight-bold">Qty</th>
+                        <th class="text-right font-weight-bold">Price</th>
+                        <th class="text-center font-weight-bold">Discount</th>
                         <th class="text-right font-weight-bold">Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
+                    <tr v-if="invoice.lineItems && invoice.lineItems.length > 0" v-for="item in invoice.lineItems" :key="item.label">
                         <td class="py-2">
+                            <div class="font-weight-medium">{{ item.label }}</div>
+                            <div class="text-caption text-grey">{{ item.type === 'service' ? 'Service' : 'Rental Product' }}</div>
+                        </td>
+                        <td class="text-center">{{ item.quantity || '-' }}</td>
+                        <td class="text-right">{{ item.price ? '€' + formatMoney(item.price) : '-' }}</td>
+                        <td class="text-center">{{ item.discount ? item.discount + '%' : '-' }}</td>
+                        <td class="text-right font-weight-bold">€{{ formatMoney(item.amount) }}</td>
+                    </tr>
+                    <tr v-else>
+                        <td colspan="5" class="py-2">
                             <div class="font-weight-medium">Rental Services</div>
                             <div class="text-caption text-grey">
                                 Contract Reference: #{{ invoice.order_id }}
                             </div>
                         </td>
-                        <td class="text-right font-weight-bold">€{{ formatMoney(invoice.amount) }}</td>
                     </tr>
                 </tbody>
             </v-table>
