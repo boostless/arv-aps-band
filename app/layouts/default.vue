@@ -10,22 +10,43 @@ const items = ref([
         to: '/',
         icon: 'mdi-view-dashboard-outline'
     },
-    { type: 'subheader', title: 'Catalog' },
+    { type: 'subheader', title: 'Greitieji veiksmai' },
     {
-        title: 'Products',
+        title: 'Naujas užsakymas',
+        to: '/orders/create',
+        icon: 'mdi-plus-box-outline'
+    },
+    { type: 'subheader', title: 'Katalogas' },
+    {
+        title: 'Užsakymai',
+        to: '/orders',
+        icon: 'mdi-file-document-outline'
+    },
+    {
+        title: 'Produktai',
         to: '/products',
         icon: 'mdi-tag-outline'
     },
-    { type: 'subheader', title: 'Configuration' },
     {
-        title: 'Warehouses',
+        title: 'Klientai',
+        to: '/customers',
+        icon: 'mdi-account-multiple-outline'
+    },
+    { type: 'subheader', title: 'Konfigūracija' },
+    {
+        title: 'Sandėliai',
         to: '/warehouses',
         icon: 'mdi-warehouse'
     },
     {
-        title: 'Units',
+        title: 'Vienetai',
         to: '/units',
         icon: 'mdi-ruler'
+    },
+    {
+        title: 'Įmonės nustatymai',
+        to: '/settings',
+        icon: 'mdi-cog-outline'
     },
 ])
 </script>
@@ -39,8 +60,8 @@ const items = ref([
                         <span class="text-h6 text-white">I</span>
                     </v-avatar>
                     <div>
-                        <div class="text-subtitle-1 font-weight-bold">Inventory App</div>
-                        <div class="text-caption text-grey">Convex + Nuxt</div>
+                        <div class="text-subtitle-1 font-weight-bold">Arvėriva ERP</div>
+                        <div class="text-caption text-grey">VakarisT</div>
                     </div>
                 </div>
 
@@ -61,7 +82,6 @@ const items = ref([
 
         <v-app-bar flat border>
             <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
-            <v-app-bar-title>Overview</v-app-bar-title>
             <v-spacer></v-spacer>
             <v-btn icon="mdi-bell-outline"></v-btn>
         </v-app-bar>

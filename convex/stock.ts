@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { stockLogFields } from "./schemas/stockLogs";
 
 // QUERY: Get stock level for a specific item in a specific warehouse
 export const get = query({
@@ -21,22 +22,20 @@ export const adjust = mutation({
     args: {
         product: v.id("products"),
         warehouse: v.id("warehouses"),
-        delta: v.number(),
-
-        // NEW ARGS for the log
+        delta: v.number(), // Amount to add/remove
         type: v.union(
-            v.literal('purchase'),
-            v.literal('sale'),
-            v.literal('transfer'),
-            v.literal('audit'),
-            v.literal('return'),
-            v.literal('initial')
+            v.literal("purchase"),
+            v.literal("sale"),
+            v.literal("transfer"),
+            v.literal("audit"),
+            v.literal("return"),
+            v.literal("initial"),
+            v.literal("rental_out")
         ),
-        reference_id: v.optional(v.string()),
         notes: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        // 1. Get current stock
+        // 1. Find existing stock record
         const existing = await ctx.db
             .query("stock")
             .withIndex("by_product_warehouse", (q) =>
@@ -44,13 +43,20 @@ export const adjust = mutation({
             )
             .unique();
 
-        let currentQty = existing ? existing.quantity : 0;
-        const newQty = currentQty + args.delta;
+        let currentQty = 0;
+        let newQty = 0;
 
-        // 2. Update or Insert Stock Record
         if (existing) {
+            currentQty = existing.quantity;
+            newQty = currentQty + args.delta;
+
+            // Update existing record
             await ctx.db.patch(existing._id, { quantity: newQty });
         } else {
+            currentQty = 0;
+            newQty = args.delta;
+
+            // Create new record
             await ctx.db.insert("stock", {
                 product: args.product,
                 warehouse: args.warehouse,
@@ -58,15 +64,15 @@ export const adjust = mutation({
             });
         }
 
-        // 3. CREATE LOG ENTRY (The "Ledger")
+        // 2. LOG THE CHANGE (Fixed: Added resulting_quantity)
         await ctx.db.insert("stock_logs", {
             product: args.product,
             warehouse: args.warehouse,
-            delta: args.delta,
-            resulting_quantity: newQty, // <--- Key for auditing
             type: args.type,
-            reference_id: args.reference_id,
-            notes: args.notes,
+            delta: args.delta,
+            resulting_quantity: newQty, // <--- THIS WAS MISSING
+            notes: args.notes || "",
+            reference_id: "Manual Adjustment",
         });
     },
 });
@@ -74,26 +80,23 @@ export const adjust = mutation({
 export const listByWarehouse = query({
     args: { warehouseId: v.id("warehouses") },
     handler: async (ctx, args) => {
-        // 1. Get ONLY the stock entries for this warehouse
         const stockEntries = await ctx.db
             .query("stock")
             .withIndex("by_warehouse", (q) => q.eq("warehouse", args.warehouseId))
             .collect();
 
-        // 2. Filter out items with 0 quantity (optional, but cleaner)
-        const activeStock = stockEntries.filter(s => s.quantity > 0);
+        const activeStock = stockEntries.filter(s => s.quantity !== 0);
 
-        // 3. Join with Product details
-        // We need to know the name/code of the items we found
         const stockWithDetails = await Promise.all(
             activeStock.map(async (entry) => {
                 const product = await ctx.db.get(entry.product);
                 return {
-                    _id: entry._id, // Stock ID
+                    _id: entry._id,
                     productId: entry.product,
                     label: product?.label ?? "Unknown Product",
                     code: product?.code ?? "???",
                     quantity: entry.quantity,
+                    unit: product?.unit, // Optional: if you need unit ID
                 };
             })
         );

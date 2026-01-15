@@ -30,6 +30,7 @@ const form = ref({
     type: 'product' as 'product' | 'service',
     unitId: '' as string, // We bind this to the ID
     priceDisplay: 0, // Visual price (e.g. 10.50)
+    dailyPriceDisplay: 0, // NEW: Visual daily rental price
     // NEW: Store the visual KG value here
     weightDisplay: undefined as number | undefined,
 });
@@ -45,6 +46,7 @@ function openCreate() {
         type: 'product',
         unitId: '',
         priceDisplay: 0,
+        dailyPriceDisplay: 0,
         weightDisplay: undefined, // Reset to empty
     };
     dialog.value = true;
@@ -59,6 +61,7 @@ function openEdit(item: any) {
         type: item.type,
         unitId: item.unit,
         priceDisplay: item.price / 100,
+        dailyPriceDisplay: item.daily_rental_price / 100,
 
         // MATH: Divide by 1000 to show KG
         weightDisplay: item.weight_gs ? item.weight_gs / 1000 : undefined,
@@ -90,7 +93,7 @@ async function handleSubmit() {
                 : undefined,
             archived: false,
             // Add defaults for optional fields if needed
-            daily_rental_price: 0,
+            daily_rental_price: Math.round(form.value.dailyPriceDisplay * 100),
         };
 
         if (editingId.value) {
@@ -124,6 +127,7 @@ const headers = [
     { title: 'Type', key: 'type' },
     { title: 'Unit', key: 'unitData.label' },
     { title: 'Price', key: 'price' },
+    { title: 'Daily Rental Price', key: 'daily_rental_price' },
     { title: 'Weight (kg)', key: 'weight_g', align: 'end' as const },
     {
         title: 'Actions',
@@ -153,6 +157,10 @@ const headers = [
             <v-data-table :headers="headers" :items="products || []" :loading="isLoading === undefined" hover>
                 <template v-slot:item.price="{ item }">
                     ${{ (item.price / 100).toFixed(2) }}
+                </template>
+
+                <template v-slot:item.daily_rental_price="{ item }">
+                    ${{ (item.daily_rental_price / 100).toFixed(2) }}
                 </template>
 
                 <template v-slot:item.type="{ item }">
@@ -207,6 +215,10 @@ const headers = [
 
                             <v-col cols="6">
                                 <v-text-field v-model.number="form.priceDisplay" label="Price ($)" type="number"
+                                    step="0.01" prefix="$" variant="outlined" density="compact"></v-text-field>
+                            </v-col>
+                            <v-col cols="6">
+                                <v-text-field v-model.number="form.dailyPriceDisplay" label="Daily Rental Price ($)" type="number"
                                     step="0.01" prefix="$" variant="outlined" density="compact"></v-text-field>
                             </v-col>
                             <v-col cols="6">

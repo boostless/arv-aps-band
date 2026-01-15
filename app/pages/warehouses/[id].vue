@@ -99,6 +99,8 @@ const headers = [
     { title: 'Product', key: 'label' },
     { title: 'SKU', key: 'code' },
     { title: 'Quantity', key: 'quantity' },
+    { title: 'Daily Rental Price', key: 'daily_rental_price' },
+    { title: 'Unit Price', key: 'price' },
     { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
 ];
 </script>
@@ -131,6 +133,14 @@ const headers = [
                         <div class="text-body-2 text-grey mb-4">Add products to start tracking inventory here.</div>
                         <v-btn variant="outlined" color="primary" @click="openAdd">Add First Item</v-btn>
                     </div>
+                </template>
+
+                <template v-slot:item.price="{ item }">
+                    ${{ (item.price / 100).toFixed(2) }}
+                </template>
+
+                <template v-slot:item.daily_rental_price="{ item }">
+                    ${{ (item.daily_rental_price / 100).toFixed(2) }}
                 </template>
 
                 <template v-slot:item.quantity="{ item }">

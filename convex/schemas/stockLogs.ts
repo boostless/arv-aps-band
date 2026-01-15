@@ -18,7 +18,8 @@ export const stockLogFields = {
         v.literal('transfer'),   // Moved between warehouses
         v.literal('audit'),      // Stocktake correction
         v.literal('return'),     // Customer return
-        v.literal('initial')     // First setup
+        v.literal('initial'),     // First setup
+        v.literal('rental_out'), // Rented out to customer
     ),
 
     // Optional: Connect it to an external event
