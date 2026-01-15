@@ -52,7 +52,7 @@ function onProductSelect(item: any, product: any) {
 
     // Auto-select warehouse
     if (warehouses.value && warehouses.value.length > 0) {
-        item.warehouseId = warehouses.value[0]._id;
+        item.warehouseId = item.warehouseId || warehouses.value?.[0]?._id || '';
     }
 
     // SET PRICE BASED ON TYPE
@@ -133,7 +133,7 @@ async function handleSubmit() {
     try {
         const payloadItems = form.value.items.map(item => ({
             product: item.productId,
-            warehouse: item.warehouseId || warehouses.value?.[0]._id, // Fallback for services
+            warehouse: item.warehouseId || warehouses.value?.[0]?._id || '', // Fallback for services
             quantity: item.quantity,
             price: Math.round(item.priceDisplay * 100), // To Cents
             discount: item.discount,

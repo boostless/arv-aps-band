@@ -13,17 +13,21 @@ const { data: contract, isPending } = useConvexQuery(api.orders.get, { id: order
 const { mutate: completeOrder, isPending: isCompleting } = useConvexMutation(api.orders.complete);
 const { mutate: returnPartial, isPending: isReturning } = useConvexMutation(api.orders.returnPartial);
 const { mutate: createInvoice, isPending: isGenerating } = useConvexMutation(api.invoices.create);
-const { mutate: addPayment, isPending: isPaying } = useConvexMutation(api.payments.add);
+
+
 
 // -- DIALOG STATES --
 const returnDialog = ref(false);
-const genInvoiceDialog = ref(false);
+
+const employeeList = ['Admin', 'Manager', 'Sales Rep'];
 
 // -- FORMS --
 const returnForm = ref<{ itemId: Id<'order_items'>; label: string; max: number; current: number; input: number }[]>([]);
+const genInvoiceDialog = ref(false);
 const genInvoiceForm = ref({
-    start_date: new Date().toISOString().substr(0, 10),
-    end_date: new Date().toISOString().substr(0, 10)
+    start_date: '',
+    end_date: '',
+    created_by: 'Admin' // Default
 });
 
 // -- UTILS --
@@ -91,7 +95,9 @@ function openGenerateInvoiceDialog() {
             const lastInvoice = validInvoices.sort((a: any, b: any) => b.end_date - a.end_date)[0];
 
             // 2. Calculate Next Day (Last End Date + 24 hours)
-            nextStartDate = new Date(lastInvoice.end_date + (24 * 60 * 60 * 1000));
+            if (lastInvoice) {
+                nextStartDate = new Date(lastInvoice.end_date + (24 * 60 * 60 * 1000));
+            }
         }
     }
 
@@ -123,7 +129,9 @@ async function handleGenerateInvoice() {
         await createInvoice({
             order_id: orderId,
             start_date: new Date(genInvoiceForm.value.start_date).getTime(),
-            end_date: new Date(genInvoiceForm.value.end_date).getTime()
+            end_date: new Date(genInvoiceForm.value.end_date).getTime(),
+            // ✅ Pass the employee name
+            created_by: genInvoiceForm.value.created_by
         });
         showToast('Invoice generated', 'success');
         genInvoiceDialog.value = false;
@@ -329,6 +337,8 @@ const invoiceHeaders = [
                     variant="outlined"></v-text-field>
                 <v-text-field v-model="genInvoiceForm.end_date" type="date" label="Billing End"
                     variant="outlined"></v-text-field>
+                <v-combobox v-model="genInvoiceForm.created_by" :items="employeeList" label="Created By"
+                    variant="outlined" placeholder="Select or type name..."></v-combobox>
                 <div class="text-caption text-grey">
                     Apskaičiuoja dienos kainą visiems aktyviems elementams šiame periode.
                 </div>

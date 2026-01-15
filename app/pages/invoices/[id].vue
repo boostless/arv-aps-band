@@ -122,12 +122,14 @@ const isOverdue = computed(() => {
 
             <v-row class="mb-8">
                 <v-col cols="12">
-                    <div class="text-caption text-uppercase font-weight-bold text-grey mb-2">Bill To</div>
-                    <div class="text-h6">{{ invoice.customer?.label || 'Unknown Customer' }}</div>
+                    <div class="text-h6">{{ invoice.customer_name || 'Unknown Customer' }}</div>
                     <div class="text-body-2 text-medium-emphasis">
-                        {{ invoice.customer?.address }}<br>
-                        {{ invoice.customer?.company_code ? `Code: ${invoice.customer.company_code}` : '' }}<br>
-                        {{ invoice.customer?.vat_code ? `VAT: ${invoice.customer.vat_code}` : '' }}
+                        {{ invoice.customer_address }}<br>
+                        <span v-if="invoice.customer_vat">VAT: {{ invoice.customer_vat }}</span>
+                    </div>
+
+                    <div class="text-caption text-grey mt-8 pt-4 border-top">
+                        Invoice created by: {{ invoice.created_by }}
                     </div>
                 </v-col>
             </v-row>
@@ -218,12 +220,8 @@ const isOverdue = computed(() => {
         <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
 
-    <PaymentDialog 
-        v-model="payDialog"
-        :invoice-id="invoice?._id"
-        :remaining-amount="remainingDue"
-        @success="showToast('Payment recorded successfully', 'success')"
-    />
+    <PaymentDialog v-model="payDialog" :invoice-id="invoice?._id" :remaining-amount="remainingDue"
+        @success="showToast('Payment recorded successfully', 'success')" />
 </template>
 
 <style scoped>

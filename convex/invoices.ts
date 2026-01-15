@@ -13,51 +13,44 @@ async function getNextInvoiceNumber(ctx: any) {
     return num;
 }
 
-// ✅ SHARED LOGIC: Can be called by UI (create) or Backend (complete)
-export async function generateInvoiceInternal(ctx: any, orderId: Id<"orders">, startDate: number, endDate: number) {
+// ✅ UPDATED: createdBy is now a required string, no default value
+export async function generateInvoiceInternal(
+    ctx: any,
+    orderId: Id<"orders">,
+    startDate: number,
+    endDate: number,
+    createdBy: string
+) {
     const order = await ctx.db.get(orderId);
     if (!order) throw new Error("Order not found");
 
     const settings = await ctx.db.query("business_settings").first();
+    const customer = await ctx.db.get(order.customer);
+
     const taxRate = settings?.tax_rate || 21;
     const dueDays = settings?.invoice_due_days || 14;
 
-    const items = await ctx.db
-        .query("order_items")
-        .withIndex("by_order", (q: any) => q.eq("order_id", orderId))
-        .collect();
+    // ... (Keep existing item cost calculation loop) ...
+    // [Paste the calculation block here]
 
+    const items = await ctx.db.query("order_items").withIndex("by_order", (q: any) => q.eq("order_id", orderId)).collect();
     let grandTotalExclTax = 0;
     const oneDayMs = 1000 * 60 * 60 * 24;
-
-    // Normalize dates to midnight
     const start = new Date(startDate).setHours(0, 0, 0, 0);
     const end = new Date(endDate).setHours(0, 0, 0, 0);
 
-    // Calculate Costs
     for (const item of items) {
-        // Fixed Items (Sales/Services) - Bill once if period covers start date
         if (item.product_type !== 'product' || order.type === 'sale') {
             if (start <= order.start_date && end >= order.start_date) {
-                const itemTotal = item.quantity * item.price * (1 - (item.discount / 100));
-                grandTotalExclTax += itemTotal;
+                grandTotalExclTax += item.quantity * item.price * (1 - (item.discount / 100));
             }
             continue;
         }
-
-        // Rental Items - Daily Calculation
         let itemPeriodCost = 0;
         for (let d = start; d <= end; d += oneDayMs) {
-            const returnsBeforeToday = (item.return_history || [])
-                .filter((ret: { date: number; qty: number }) => ret.date < d)
-                .reduce((sum: number, ret: { date: number; qty: number }) => sum + ret.qty, 0);
-
+            const returnsBeforeToday = (item.return_history || []).filter((ret: any) => ret.date < d).reduce((sum: number, ret: any) => sum + ret.qty, 0);
             const activeQty = Math.max(0, item.quantity - returnsBeforeToday);
-
-            if (activeQty > 0) {
-                const dailyRate = item.price * (1 - (item.discount / 100));
-                itemPeriodCost += activeQty * dailyRate;
-            }
+            if (activeQty > 0) itemPeriodCost += activeQty * (item.price * (1 - (item.discount / 100)));
         }
         grandTotalExclTax += itemPeriodCost;
     }
@@ -65,10 +58,8 @@ export async function generateInvoiceInternal(ctx: any, orderId: Id<"orders">, s
     const taxAmount = grandTotalExclTax * (taxRate / 100);
     const totalAmount = grandTotalExclTax + taxAmount;
 
-    // If nothing to bill, return null (don't error, just skip)
     if (totalAmount <= 0) return null;
 
-    // Create Invoice
     const invoiceNum = await getNextInvoiceNumber(ctx);
     const dueDate = Date.now() + (dueDays * oneDayMs);
 
@@ -81,22 +72,36 @@ export async function generateInvoiceInternal(ctx: any, orderId: Id<"orders">, s
         amount: Math.round(totalAmount),
         tax_amount: Math.round(taxAmount),
         status: 'unpaid',
+
+        // ✅ REQUIRED FIELD
+        created_by: createdBy,
+
+        customer_id: customer?._id,
+        customer_name: customer?.label || "Unknown",
+        customer_address: customer?.address,
+        customer_vat: customer?.vat_code
     });
 
     return invoiceId;
 }
 
-// -- MUTATIONS --
-
+// ✅ UPDATED MUTATION
 export const create = mutation({
     args: {
         order_id: v.id("orders"),
         start_date: v.number(),
         end_date: v.number(),
+        created_by: v.string() // ✅ Required
     },
     handler: async (ctx, args) => {
-        const id = await generateInvoiceInternal(ctx, args.order_id, args.start_date, args.end_date);
-        if (!id) throw new Error("Invoice amount is 0. Nothing to bill for this period.");
+        const id = await generateInvoiceInternal(
+            ctx,
+            args.order_id,
+            args.start_date,
+            args.end_date,
+            args.created_by // Pass directly
+        );
+        if (!id) throw new Error("Invoice amount is 0.");
         return id;
     }
 });

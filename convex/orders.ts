@@ -276,7 +276,13 @@ export const complete = mutation({
             try {
                 // We don't await the ID, just let it happen.
                 // If it returns null (0 amount), that's fine.
-                await generateInvoiceInternal(ctx, args.id, billingStart, billingEnd);
+                await generateInvoiceInternal(
+                    ctx,
+                    args.id,
+                    billingStart,
+                    billingEnd,
+                    "System (Auto)" // ✅ Pass explicit string here
+                );
             } catch (e) {
                 console.error("Auto-invoice failed:", e);
                 // We suppress error so the Order still completes
@@ -393,7 +399,13 @@ export const returnPartial = mutation({
             // B. Generate Final Invoice
             if (billingStart <= billingEnd) {
                 try {
-                    await generateInvoiceInternal(ctx, args.orderId, billingStart, billingEnd);
+                    await generateInvoiceInternal(
+                        ctx,
+                        args.orderId,
+                        billingStart,
+                        billingEnd,
+                        "System (Auto)" // ✅ Pass explicit string here
+                    );
                 } catch (e) {
                     console.error("Auto-invoice on partial return failed (likely 0 amount):", e);
                 }
