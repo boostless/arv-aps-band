@@ -31,14 +31,14 @@ function formatDate(timestamp: number) {
 
 // -- HEADERS --
 const headers = [
-    { title: 'Invoice #', key: 'invoice_number' },
-    { title: 'Date', key: 'start_date' },
-    { title: 'Customer', key: 'customerName' },
-    { title: 'Amount', key: 'amount', align: 'end' as const },
-    { title: 'Paid', key: 'paidAmount', align: 'end' as const },
-    { title: 'Balance', key: 'remainingAmount', align: 'end' as const },
-    { title: 'Status', key: 'status', align: 'center' as const },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Sąskaita #', key: 'invoice_number' },
+    { title: 'Data', key: 'start_date' },
+    { title: 'Klientas', key: 'customerName' },
+    { title: 'Suma', key: 'amount', align: 'end' as const },
+    { title: 'Apmokėta', key: 'paidAmount', align: 'end' as const },
+    { title: 'Balansas', key: 'remainingAmount', align: 'end' as const },
+    { title: 'Statusas', key: 'status', align: 'center' as const },
+    { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
 </script>
 
@@ -46,8 +46,8 @@ const headers = [
     <div>
         <div class="d-flex align-center justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Invoices</h1>
-                <div class="text-subtitle-1 text-medium-emphasis">Financial overview</div>
+                <h1 class="text-h4 font-weight-bold">Sąskaitos</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">Finansinė apžvalga</div>
             </div>
         </div>
 
@@ -55,11 +55,11 @@ const headers = [
             <v-col cols="12" md="4">
                 <v-card border flat color="red-lighten-5">
                     <v-card-text>
-                        <div class="text-caption font-weight-bold text-red-darken-4 text-uppercase">Total Outstanding
+                        <div class="text-caption font-weight-bold text-red-darken-4 text-uppercase">Iš viso neapmokėta
                         </div>
                         <div class="text-h4 font-weight-bold text-red-darken-4">€{{ formatMoney(stats.totalDue) }}</div>
                         <div v-if="stats.overdueCount > 0" class="text-caption text-red-darken-3 mt-1">
-                            {{ stats.overdueCount }} invoice(s) overdue
+                            {{ stats.overdueCount }} sąskaitos vėluoja
                         </div>
                     </v-card-text>
                 </v-card>
@@ -89,18 +89,18 @@ const headers = [
                     <span v-if="item.remainingAmount > 0" class="text-red font-weight-bold">
                         €{{ formatMoney(item.remainingAmount) }}
                     </span>
-                    <span v-else class="text-success text-caption font-weight-bold">PAID</span>
+                    <span v-else class="text-success text-caption font-weight-bold">APMOKĖTA</span>
                 </template>
 
                 <template v-slot:item.status="{ item }">
                     <v-chip v-if="item.remainingAmount <= 0" color="success" size="small" variant="tonal" label>
-                        Paid
+                        Apmokėta
                     </v-chip>
                     <v-chip v-else-if="item.status === 'void'" color="grey" size="small" variant="tonal" label>
-                        Void
+                        Anuliuota
                     </v-chip>
                     <v-chip v-else :color="item.isOverdue ? 'error' : 'warning'" size="small" variant="tonal" label>
-                        {{ item.isOverdue ? 'Overdue' : 'Unpaid' }}
+                        {{ item.isOverdue ? 'Vėluoja' : 'Neapmokėta' }}
                     </v-chip>
                 </template>
 
@@ -108,15 +108,15 @@ const headers = [
                     <v-btn icon="mdi-eye-outline" size="small" variant="text" color="primary"
                         :to="`/invoices/${item._id}`">
                         <v-icon>mdi-eye-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">Open Invoice</v-tooltip>
+                        <v-tooltip activator="parent" location="top">Peržiūrėti sąskaitą</v-tooltip>
                     </v-btn>
                 </template>
 
                 <template v-slot:no-data>
                     <div class="pa-8 text-center text-grey">
                         <v-icon size="64" class="mb-4">mdi-file-document-outline</v-icon>
-                        <div>No invoices generated yet.</div>
-                        <div class="text-caption">Go to an Active Order to generate one.</div>
+                        <div>Dar nėra sugeneruota sąskaitų.</div>
+                        <div class="text-caption">Eikite į aktyvų užsakymą, kad sugeneruotumėte sąskaitą.</div>
                     </div>
                 </template>
             </v-data-table>

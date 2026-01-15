@@ -63,19 +63,19 @@ function getStatusColor(status: string) {
 
 // -- HEADERS --
 const orderHeaders = [
-    { title: 'Contract #', key: 'contract_number' },
-    { title: 'Date', key: 'start_date' },
-    { title: 'Type', key: 'type' },
-    { title: 'Status', key: 'status' },
-    { title: 'Est. Value', key: 'total_amount', align: 'end' as const }, // Est. value of contract
-    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Užsakymas #', key: 'contract_number' },
+    { title: 'Data', key: 'start_date' },
+    { title: 'Tipas', key: 'type' },
+    { title: 'Būsena', key: 'status' },
+    { title: 'Numatoma vertė', key: 'total_amount', align: 'end' as const }, // Est. value of contract
+    { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
 
 const paymentHeaders = [
-    { title: 'Date', key: 'date' },
-    { title: 'Invoice Ref', key: 'invoice_number' },
-    { title: 'Method', key: 'method' },
-    { title: 'Amount', key: 'amount', align: 'end' as const },
+    { title: 'Data', key: 'date' },
+    { title: 'Sąskaitos Nr.', key: 'invoice_number' },
+    { title: 'Mokėjimo būdas', key: 'method' },
+    { title: 'Suma', key: 'amount', align: 'end' as const },
 ];
 </script>
 
@@ -83,7 +83,7 @@ const paymentHeaders = [
     <div v-if="profile">
         <div class="mb-6">
             <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/customers" class="mb-2 pl-0">
-                Back to List
+                Atgal į sąrašą
             </v-btn>
             <div class="d-flex align-center justify-space-between">
                 <div>
@@ -100,23 +100,23 @@ const paymentHeaders = [
                     <v-card-text>
                         <div class="text-caption font-weight-bold text-uppercase mb-1"
                             :class="stats.debt > 0 ? 'text-red-darken-4' : 'text-grey'">
-                            Total Invoiced Debt
+                            Skola
                         </div>
                         <div v-if="stats.debt > 0" class="text-h4 font-weight-bold"
                             :class="stats.debt > 0 ? 'text-red-darken-4' : ''">
                             €{{ formatMoney(stats.debt) }}
                         </div>
                         <div v-else class="text-caption mt-1 text-success font-weight-bold">
-                            All Invoices Paid
+                            Visos sąskaitos apmokėtos
                         </div>
                         <div v-if="stats.overdueCount > 0" class="text-caption text-red font-weight-bold mt-1">
-                            {{ stats.overdueCount }} Overdue Invoice(s)
+                            {{ stats.overdueCount }} Vėluojanti sąskaita(-os)
                         </div>
                     </v-card-text>
                 </v-card>
 
                 <v-card border flat>
-                    <v-card-title class="text-subtitle-1 font-weight-bold">Contact Details</v-card-title>
+                    <v-card-title class="text-subtitle-1 font-weight-bold">Kontaktinė informacija</v-card-title>
                     <v-list density="compact">
                         <v-list-item prepend-icon="mdi-map-marker">
                             <v-list-item-title class="text-wrap">{{ profile.customer.address }}</v-list-item-title>
@@ -154,16 +154,16 @@ const paymentHeaders = [
                 <v-card v-if="stats.debt > 0" border flat class="mb-6 border-red">
                     <v-card-item>
                         <div class="d-flex justify-space-between align-center">
-                            <v-card-title class="text-red-darken-3">Unpaid Invoices</v-card-title>
+                            <v-card-title class="text-red-darken-3">Neapmokėtos sąskaitos</v-card-title>
                         </div>
                     </v-card-item>
                     <v-table density="compact">
                         <thead>
                             <tr>
-                                <th>Invoice #</th>
-                                <th>Date</th>
-                                <th class="text-right">Total</th>
-                                <th class="text-right">Due</th>
+                                <th>Sąskaitos Nr.</th>
+                                <th>Data</th>
+                                <th class="text-right">Suma</th>
+                                <th class="text-right">Likutis</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -177,7 +177,7 @@ const paymentHeaders = [
                                 </td>
                                 <td class="text-right">
                                     <v-btn size="x-small" variant="text" color="primary"
-                                        :to="`/invoices/${inv._id}`">View</v-btn>
+                                        :to="`/invoices/${inv._id}`">Peržiūrėti</v-btn>
                                 </td>
                             </tr>
                         </tbody>
@@ -186,8 +186,8 @@ const paymentHeaders = [
 
                 <v-card border flat class="mb-6">
                     <v-card-item>
-                        <v-card-title>Contracts History</v-card-title>
-                        <v-card-subtitle>Lifetime Invoiced: €{{ formatMoney(stats.lifetime) }}</v-card-subtitle>
+                        <v-card-title>Užsakymų istorija</v-card-title>
+                        <v-card-subtitle>Išviso: €{{ formatMoney(stats.lifetime) }}</v-card-subtitle>
                     </v-card-item>
 
                     <v-data-table :headers="orderHeaders" :items="profile.orders" density="comfortable" hover>
@@ -218,13 +218,19 @@ const paymentHeaders = [
                             <v-btn icon="mdi-chevron-right" variant="text" size="small"
                                 :to="`/orders/${item._id}`"></v-btn>
                         </template>
+
+                        <template v-slot:no-data>
+                            <div class="text-caption text-grey text-center pa-4">
+                                Dar nėra įrašytų užsakymų.
+                            </div>
+                        </template>
                     </v-data-table>
                 </v-card>
 
                 <v-card border flat>
                     <v-card-item>
-                        <v-card-title>Payment History</v-card-title>
-                        <v-card-subtitle>All transactions recorded against invoices</v-card-subtitle>
+                        <v-card-title>Mokėjimų istorija</v-card-title>
+                        <v-card-subtitle>Visi užsakymai, įrašyti prie sąskaitų</v-card-subtitle>
                     </v-card-item>
 
                     <v-data-table :headers="paymentHeaders" :items="paymentHistory" density="comfortable" hover>
@@ -256,7 +262,7 @@ const paymentHeaders = [
 
                         <template v-slot:no-data>
                             <div class="text-caption text-grey text-center pa-4">
-                                No payments recorded yet.
+                                Dar nėra įrašytų mokėjimų.
                             </div>
                         </template>
                     </v-data-table>

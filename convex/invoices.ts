@@ -170,3 +170,24 @@ export const list = query({
         return invoicesWithDetails;
     },
 });
+
+export const voidInvoice = mutation({
+    args: { id: v.id("invoices") },
+    handler: async (ctx, args) => {
+        const invoice = await ctx.db.get(args.id);
+        if (!invoice) throw new Error("Invoice not found");
+
+        // 1. Safety Check: Don't void if money has been taken
+        const payments = await ctx.db
+            .query("payments")
+            .withIndex("by_invoice", q => q.eq("invoice_id", args.id))
+            .collect();
+
+        if (payments.length > 0) {
+            throw new Error("Cannot void an invoice with recorded payments. Delete payments first.");
+        }
+
+        // 2. Mark as Void
+        await ctx.db.patch(args.id, { status: 'void' });
+    }
+});

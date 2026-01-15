@@ -6,7 +6,7 @@ const drawer = ref(true) // Controls sidebar visibility
 // Navigation Menu Items
 const items = ref([
     {
-        title: 'Dashboard',
+        title: 'Apžvalga',
         to: '/',
         icon: 'mdi-view-dashboard-outline'
     },

@@ -164,14 +164,15 @@ const headers = [
                 <v-card-title>{{ editingId ? 'Edit Customer' : 'New Customer' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
-                        <v-row dense class="mt-2">
-                            <v-col cols="8">
-                                <v-text-field v-model="form.label" label="Customer Name" variant="outlined"
-                                    autofocus></v-text-field>
-                            </v-col>
+                        <v-row dense class="mt-2">    
                             <v-col cols="4">
                                 <v-text-field v-model="form.code" label="Code" variant="outlined"
                                     :disabled="!!editingId"></v-text-field>
+                            </v-col>
+
+                            <v-col cols="8">
+                                <v-text-field v-model="form.label" label="Customer Name" variant="outlined"
+                                    autofocus></v-text-field>
                             </v-col>
 
                             <v-col cols="6">

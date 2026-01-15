@@ -7,17 +7,37 @@ import { paymentFields } from "./schemas/payments"; // Check if your folder is '
 export const add = mutation({
     args: { ...paymentFields },
     handler: async (ctx, args) => {
-        // Verify invoice exists and is unpaid? (Optional validation)
+        // 1. Verify invoice exists
         const invoice = await ctx.db.get(args.invoice_id);
         if (!invoice) throw new Error("Invoice not found");
 
+        // 2. Insert the new payment
         await ctx.db.insert("payments", args);
 
-        // Optional: Auto-update invoice status to 'paid' if balance is 0?
-        // You can add that logic here later.
+        // 3. Recalculate Total Paid
+        // We fetch all payments again to be 100% sure of the total (including the one we just added)
+        const allPayments = await ctx.db
+            .query("payments")
+            .withIndex("by_invoice", q => q.eq("invoice_id", args.invoice_id))
+            .collect();
+
+        const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
+
+        // 4. Update Invoice Status
+        // If paid amount covers the invoice amount (allow for tiny floating point errors if any, though we use integers)
+        if (totalPaid >= invoice.amount) {
+            if (invoice.status !== 'paid') {
+                await ctx.db.patch(args.invoice_id, { status: 'paid' });
+            }
+        } else {
+            // Optional: If you support deleting payments, you might want to revert to 'unpaid' here too.
+            // For adding payments, we usually only go Unpaid -> Paid.
+            if (invoice.status === 'paid') {
+                await ctx.db.patch(args.invoice_id, { status: 'unpaid' });
+            }
+        }
     },
 });
-
 // 2. GET PAYMENTS (Changed from listByOrder to listByInvoice)
 export const listByInvoice = query({
     args: { invoiceId: v.id("invoices") },

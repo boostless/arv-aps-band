@@ -41,7 +41,7 @@ function getLogIcon(type: string) {
         case 'return': return 'mdi-keyboard-return';
         case 'transfer': return 'mdi-swap-horizontal';
         case 'audit': return 'mdi-clipboard-check';
-        default: return 'mdi-circle-small';
+        default: return 'mdi-information-outline';
     }
 }
 </script>
@@ -65,7 +65,7 @@ function getLogIcon(type: string) {
                         <template v-slot:prepend>
                             <v-icon color="primary" class="mr-2">mdi-clock-outline</v-icon>
                         </template>
-                        <v-card-title>Aktyvios sutartys</v-card-title>
+                        <v-card-title>Aktyvūs užsakymai</v-card-title>
                         <v-card-subtitle>Įranga, kuri šiuo metu išnuomota</v-card-subtitle>
                         <template v-slot:append>
                             <v-btn variant="text" size="small" color="primary" to="/orders">Visos</v-btn>

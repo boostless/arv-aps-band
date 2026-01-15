@@ -165,9 +165,9 @@ async function handleSubmit() {
     <div class="pb-12">
         <div class="d-flex justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Create Contract</h1>
+                <h1 class="text-h4 font-weight-bold">Sukurti užsakymą</h1>
                 <div class="text-subtitle-1 text-medium-emphasis">
-                    {{ form.type === 'rental' ? 'New Rental Agreement' : 'New Sale Order' }}
+                    {{ form.type === 'rental' ? 'Nauja nuomos sutartis' : 'Naujas pardavimo užsakymas' }}
                 </div>
             </div>
 
@@ -181,26 +181,26 @@ async function handleSubmit() {
                             <v-row>
                                 <v-col cols="12" md="4">
                                     <v-autocomplete v-model="form.customer" :items="customers || []" item-title="label"
-                                        item-value="_id" label="Customer" variant="outlined"
+                                        item-value="_id" label="Klientas" variant="outlined"
                                         prepend-inner-icon="mdi-account"></v-autocomplete>
                                 </v-col>
                                 <v-col cols="6" md="2">
-                                    <v-select v-model="form.type" :items="['rental', 'sale']" label="Type"
+                                    <v-select v-model="form.type" :items="['rental', 'sale']" label="Tipas"
                                         variant="outlined"></v-select>
                                 </v-col>
                                 <v-col cols="6" md="3">
-                                    <v-text-field v-model="form.start_date" type="date" label="Start Date"
+                                    <v-text-field v-model="form.start_date" type="date" label="Pradžios data"
                                         variant="outlined"></v-text-field>
                                 </v-col>
                                 <v-col cols="6" md="3">
-                                    <v-text-field v-model="form.end_date" type="date" label="End Date (Optional)"
+                                    <v-text-field v-model="form.end_date" type="date" label="Pabaigos data (Pasirinktinai)"
                                         variant="outlined" :disabled="form.type === 'sale'"></v-text-field>
                                 </v-col>
                             </v-row>
                             <v-row dense class="mt-2">
                                 <v-col cols="12">
-                                    <v-textarea v-model="form.notes" label="Contract Notes / Instructions"
-                                        placeholder="e.g. Deliver to the back gate, Call upon arrival..." rows="2"
+                                    <v-textarea v-model="form.notes" label="Pastabos / Instrukcijos"
+                                        placeholder="pvz. Pristatyti prie galinio vartų, Skambinti atvykus..." rows="2"
                                         variant="outlined" density="comfortable" hide-details></v-textarea>
                                 </v-col>
                             </v-row>
@@ -213,12 +213,12 @@ async function handleSubmit() {
                         <v-table>
                             <thead>
                                 <tr>
-                                    <th style="width: 25%">Product</th>
-                                    <th style="width: 20%">Warehouse</th>
-                                    <th style="width: 10%">Qty</th>
-                                    <th style="width: 15%">Price</th>
-                                    <th style="width: 10%">Disc %</th>
-                                    <th style="width: 15%" class="text-right">Total</th>
+                                    <th style="width: 25%">Produktas</th>
+                                    <th style="width: 20%">Sandėlis</th>
+                                    <th style="width: 10%">Kiekis</th>
+                                    <th style="width: 15%">Kaina</th>
+                                    <th style="width: 10%">Nuolaida %</th>
+                                    <th style="width: 15%" class="text-right">Iš viso</th>
                                     <th style="width: 5%"></th>
                                 </tr>
                             </thead>
@@ -226,7 +226,7 @@ async function handleSubmit() {
                                 <tr v-for="(item, i) in form.items" :key="i">
                                     <td>
                                         <v-autocomplete :items="products || []" item-title="label" return-object
-                                            variant="plain" hide-details placeholder="Select Product"
+                                            variant="plain" hide-details placeholder="Pasirinkite produktą"
                                             @update:model-value="(val) => onProductSelect(item, val)"></v-autocomplete>
                                     </td>
 
@@ -234,7 +234,7 @@ async function handleSubmit() {
                                         <v-select v-model="item.warehouseId" :items="warehouses || []" item-title="code"
                                             item-value="_id" variant="plain" density="compact" hide-details
                                             :disabled="item.type === 'service'"
-                                            :placeholder="item.type === 'service' ? 'Service' : 'Select WH'"></v-select>
+                                            :placeholder="item.type === 'service' ? 'Paslauga' : 'Pasirinkite sandėlį'"></v-select>
                                     </td>
 
                                     <td>
@@ -245,7 +245,7 @@ async function handleSubmit() {
                                     <td>
                                         <v-text-field v-model.number="item.priceDisplay" type="number" prefix="€"
                                             variant="plain" hide-details density="compact"
-                                            :label="form.type === 'rental' ? 'Daily Rate' : 'Unit Price'"></v-text-field>
+                                            :label="form.type === 'rental' ? 'Dienos kaina' : 'Vieneto kaina'"></v-text-field>
                                     </td>
 
                                     <td>
@@ -268,7 +268,7 @@ async function handleSubmit() {
 
                         <div class="pa-4 border-top">
                             <v-btn variant="tonal" color="primary" prepend-icon="mdi-plus" @click="addItem">
-                                Add Line Item
+                                Pridėti produktą
                             </v-btn>
                         </div>
                     </v-card>
@@ -278,27 +278,27 @@ async function handleSubmit() {
                     <v-card border flat class="bg-grey-lighten-5">
                         <v-card-text>
                             <div class="d-flex justify-space-between mb-2">
-                                <span>Subtotal</span>
+                                <span>Viso</span>
                                 <span class="font-weight-medium">€{{ subtotalDisplay.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-space-between mb-4">
-                                <span>VAT ({{ settings?.tax_rate || 21 }}%)</span>
+                                <span>PVM ({{ settings?.tax_rate || 21 }}%)</span>
                                 <span class="font-weight-medium">€{{ (grandTotal - subtotalDisplay).toFixed(2) }}</span>
                             </div>
                             <v-divider class="mb-4"></v-divider>
                             <div class="d-flex justify-space-between text-h5 font-weight-bold">
-                                <span>Estimated Total</span>
+                                <span>Galutinė suma</span>
                                 <span>€{{ grandTotal.toFixed(2) }}</span>
                             </div>
                             <div v-if="form.type === 'rental'"
                                 class="text-caption text-right text-medium-emphasis mt-1">
-                                (Per Day)
+                                (Per dieną)
                             </div>
                         </v-card-text>
                         <v-card-actions class="pa-4">
                             <v-btn block color="success" size="large" variant="flat" :loading="isSubmitting"
                                 @click="handleSubmit">
-                                Create Contract
+                                Sukurti užsakymą
                             </v-btn>
                         </v-card-actions>
                     </v-card>

@@ -9,14 +9,10 @@ const { trigger: showToast } = useSnackbar();
 // -- DATA --
 // We reuse the 'get' query from invoices.ts which returns invoice + payments
 const { data: invoice, isPending } = useConvexQuery(api.invoices.get, { id: invoiceId });
-
-// -- PAYMENT MUTATION --
-const { mutate: addPayment, isPending: isPaying } = useConvexMutation(api.payments.add);
+const { mutate: markVoid, isPending: isVoiding } = useConvexMutation(api.invoices.voidInvoice);
 
 // -- DIALOG STATE --
 const payDialog = ref(false);
-const payForm = ref({ amountDisplay: 0, method: 'bank', notes: '' });
-
 // -- COMPUTED --
 const remainingDue = computed(() => {
     if (!invoice.value) return 0;
@@ -38,27 +34,15 @@ function printInvoice() {
     window.print();
 }
 
-// -- ACTIONS --
-function openPaymentDialog() {
-    // Auto-fill remaining amount
-    payForm.value.amountDisplay = remainingDue.value / 100;
-    payDialog.value = true;
-}
+async function handleVoid() {
+    if (!confirm('Are you sure you want to VOID this invoice? This cannot be undone.')) return;
 
-async function handlePayment() {
-    if (payForm.value.amountDisplay <= 0) return;
-
-    await addPayment({
-        invoice_id: invoiceId,
-        amount: Math.round(payForm.value.amountDisplay * 100),
-        date: Date.now(),
-        method: payForm.value.method as any,
-        notes: payForm.value.notes
-    });
-
-    showToast('Payment recorded', 'success');
-    payDialog.value = false;
-    payForm.value = { amountDisplay: 0, method: 'bank', notes: '' };
+    try {
+        await markVoid({ id: invoiceId });
+        showToast('Invoice marked as Void', 'success');
+    } catch (err: any) {
+        showToast(err.toString().replace('Error: ', ''), 'error');
+    }
 }
 
 const isOverdue = computed(() => {
@@ -72,22 +56,44 @@ const isOverdue = computed(() => {
         <div class="d-flex align-center justify-space-between mb-6 no-print">
             <div class="d-flex align-center">
                 <v-btn variant="text" icon="mdi-arrow-left" @click="$router.back()" class="mr-2"></v-btn>
-                <h1 class="text-h4 font-weight-bold">Invoice #{{ invoice.invoice_number }}</h1>
-                <v-chip class="ml-4 text-uppercase" size="small" :color="isPaid ? 'success' : 'error'" variant="flat">
-                    {{ isPaid ? 'PAID' : 'UNPAID' }}
+                <h1 class="text-h4 font-weight-bold"
+                    :class="invoice.status === 'void' ? 'text-decoration-line-through text-grey' : ''">
+                    Invoice #{{ invoice.invoice_number }}
+                </h1>
+
+                <v-chip class="ml-4 text-uppercase" size="small"
+                    :color="invoice.status === 'void' ? 'grey' : (isPaid ? 'success' : 'error')" variant="flat">
+                    {{ invoice.status === 'void' ? 'VOID' : (isPaid ? 'PAID' : 'UNPAID') }}
                 </v-chip>
             </div>
+
             <div>
                 <v-btn variant="outlined" class="mr-2" @click="printInvoice">
                     <v-icon start>mdi-printer</v-icon> Print
                 </v-btn>
-                <v-btn v-if="!isPaid" color="success" prepend-icon="mdi-cash" @click="openPaymentDialog">
+
+                <v-btn v-if="!isPaid && invoice.status !== 'void'" color="success" class="mr-2" prepend-icon="mdi-cash"
+                    @click="payDialog = true">
                     Record Payment
+                </v-btn>
+
+                <v-btn v-if="invoice.status !== 'void' && !isPaid" color="error" variant="text" :loading="isVoiding"
+                    @click="handleVoid">
+                    Void
                 </v-btn>
             </div>
         </div>
 
-        <v-card class="invoice-card pa-8" border flat>
+        <v-card class="invoice-card pa-8" border flat
+            :style="invoice.status === 'void' ? 'opacity: 0.5; background-color: #f5f5f5;' : ''">
+            <div v-if="invoice.status === 'void'"
+                class="position-absolute d-flex justify-center align-center w-100 h-100"
+                style="top:0; left:0; pointer-events: none; z-index: 10;">
+                <div class="text-h1 font-weight-black text-grey-lighten-1"
+                    style="transform: rotate(-30deg); border: 10px solid #bdbdbd; padding: 20px; opacity: 0.4;">
+                    VOID
+                </div>
+            </div>
             <v-row class="mb-8">
                 <v-col cols="6">
                     <div class="text-h5 font-weight-bold mb-1">
@@ -105,7 +111,8 @@ const isOverdue = computed(() => {
                     <div class="text-subtitle-1 text-grey">
                         Period: {{ formatDate(invoice.start_date) }} - {{ formatDate(invoice.end_date) }}
                     </div>
-                    <div v-if="invoice.due_date" class="text-subtitle-2 font-weight-bold mt-1" :class="isOverdue ? 'text-red' : ''">
+                    <div v-if="invoice.due_date" class="text-subtitle-2 font-weight-bold mt-1"
+                        :class="isOverdue ? 'text-red' : ''">
                         Due Date: {{ formatDate(invoice.due_date) }}
                     </div>
                 </v-col>
@@ -211,23 +218,12 @@ const isOverdue = computed(() => {
         <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
 
-    <v-dialog v-model="payDialog" max-width="400">
-        <v-card>
-            <v-card-title>Record Payment</v-card-title>
-            <v-card-text class="pt-4">
-                <v-text-field v-model.number="payForm.amountDisplay" label="Amount (€)" type="number" variant="outlined"
-                    autofocus></v-text-field>
-                <v-select v-model="payForm.method" :items="['bank', 'cash', 'card']" label="Method"
-                    variant="outlined"></v-select>
-                <v-text-field v-model="payForm.notes" label="Notes (Optional)" variant="outlined"></v-text-field>
-            </v-card-text>
-            <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn variant="text" @click="payDialog = false">Cancel</v-btn>
-                <v-btn color="success" variant="flat" :loading="isPaying" @click="handlePayment">Confirm</v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
+    <PaymentDialog 
+        v-model="payDialog"
+        :invoice-id="invoice?._id"
+        :remaining-amount="remainingDue"
+        @success="showToast('Payment recorded successfully', 'success')"
+    />
 </template>
 
 <style scoped>

@@ -30,22 +30,22 @@ function getStatusColor(status: string) {
 // -- HEADERS --
 const headers = [
     // CHANGED: Invoice # -> Contract #
-    { title: 'Contract #', key: 'contract_number' },
-    { title: 'Date', key: 'start_date' },
-    { title: 'Customer', key: 'customerName' },
-    { title: 'Type', key: 'type' },
-    { title: 'Status', key: 'status' },
+    { title: 'Užsakymas #', key: 'contract_number' },
+    { title: 'Data', key: 'start_date' },
+    { title: 'Klientas', key: 'customerName' },
+    { title: 'Tipas', key: 'type' },
+    { title: 'Statusas', key: 'status' },
     // This is now the "Contract Value" or "Daily Rate" depending on type
-    { title: 'Est. Total / Rate', key: 'total_amount', align: 'end' as const },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Galutinė suma / Įkainis', key: 'total_amount', align: 'end' as const },
+    { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
 
 async function handleComplete(orderId: Id<'orders'>) {
-    if (!confirm('Are you sure? This will return all items to stock and close the contract.')) return;
+    if (!confirm('Ar tikrai? Tai grąžins visus produktus į sandėlį ir uždarys užsakymą.')) return;
 
     try {
         await completeOrder({ id: orderId });
-        showToast('Contract completed & stock returned', 'success');
+        showToast('Užsakymas užbaigtas ir produktai grąžinti į sandėlį', 'success');
     } catch (err: any) {
         showToast(err.toString().replace('Error: ', ''), 'error');
     }
@@ -56,12 +56,12 @@ async function handleComplete(orderId: Id<'orders'>) {
     <div>
         <div class="d-flex align-center justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Contracts (Orders)</h1>
-                <div class="text-subtitle-1 text-medium-emphasis">Manage active rentals and sales</div>
+                <h1 class="text-h4 font-weight-bold">Užsakymai</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">Valdykite aktyvias nuomas ir pardavimus</div>
             </div>
 
             <v-btn color="primary" prepend-icon="mdi-plus" size="large" to="/orders/create">
-                New Contract
+                Naujas užsakymas
             </v-btn>
         </div>
 
@@ -105,23 +105,23 @@ async function handleComplete(orderId: Id<'orders'>) {
                     <v-btn icon="mdi-eye-outline" size="small" variant="text" color="primary"
                         :to="`/orders/${item._id}`">
                         <v-icon>mdi-eye-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">View Details</v-tooltip>
+                        <v-tooltip activator="parent" location="top">Peržūrėti užsakymą</v-tooltip>
                     </v-btn>
 
                     <v-btn v-if="item.status == 'active' && item.type == 'rental'" icon="mdi-check-circle-outline"
                         size="small" variant="text" color="green" @click="handleComplete(item._id)"
                         :loading="isCompleting">
                         <v-icon>mdi-check-circle-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">Return & Close</v-tooltip>
+                        <v-tooltip activator="parent" location="top">Užbaikti ir uždaryti</v-tooltip>
                     </v-btn>
                 </template>
 
                 <template v-slot:no-data>
                     <div class="pa-8 text-center">
                         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-file-document-outline</v-icon>
-                        <div class="text-h6 text-grey">No contracts found</div>
+                        <div class="text-h6 text-grey">Nerasta užsakymų</div>
                         <v-btn variant="text" color="primary" class="mt-2" to="/orders/create">
-                            Create your first contract
+                            Sukurti pirmą užsakymą
                         </v-btn>
                     </div>
                 </template>
