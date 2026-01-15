@@ -10,6 +10,7 @@ import { customerFields } from "./schemas/customers";
 import { orderFields, orderItemFields } from "./schemas/orders";
 import { paymentFields } from "./schemas/payments";
 import { invoiceFields } from "./schemas/invoices";
+import { productTypeFields } from "./schemas/productTypes";
 
 export default defineSchema({
     products: defineTable(productFields)
@@ -41,4 +42,6 @@ export default defineSchema({
     invoices: defineTable(invoiceFields)
         .index("by_order", ["order_id"])
         .index("by_number", ["invoice_number"]),
+    product_types: defineTable(productTypeFields)
+        .index("by_key", ["key"]),
 });

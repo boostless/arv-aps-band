@@ -49,6 +49,11 @@ const items = ref([
         icon: 'mdi-ruler'
     },
     {
+        title: 'Produkto tipai',
+        to: '/productTypes',
+        icon: 'mdi-shape-outline'
+    },
+    {
         title: 'Įmonės nustatymai',
         to: '/settings',
         icon: 'mdi-cog-outline'

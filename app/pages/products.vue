@@ -16,6 +16,7 @@ const { data: units } = useConvexQuery(api.units.list, {}); // Needed for Dropdo
 const { mutate: createProduct, isPending: isCreating } = useConvexMutation(api.products.create);
 const { mutate: updateProduct, isPending: isUpdating } = useConvexMutation(api.products.update);
 const { mutate: archiveProduct, isPending: isArchiving } = useConvexMutation(api.products.archive);
+const { data: productTypes } = useConvexQuery(api.product_types.list, {});
 
 // -- STATE --
 const dialog = ref(false);
@@ -27,7 +28,7 @@ const itemToDelete = ref<Id<'products'> | null>(null);
 const form = ref({
     code: '',
     label: '',
-    type: 'product' as 'product' | 'service',
+    type: '' as string, // Changed to string to hold product type ID
     unitId: '' as string, // We bind this to the ID
     priceDisplay: 0, // Visual price (e.g. 10.50)
     dailyPriceDisplay: 0, // NEW: Visual daily rental price
@@ -43,7 +44,7 @@ function openCreate() {
     form.value = {
         code: '',
         label: '',
-        type: 'product',
+        type: productTypes.value && productTypes.value.length > 0 ? productTypes.value[0]._id : '',
         unitId: '',
         priceDisplay: 0,
         dailyPriceDisplay: 0,
@@ -166,7 +167,7 @@ const headers = [
                 <template v-slot:item.type="{ item }">
                     <v-chip size="small" :color="item.type === 'service' ? 'purple' : 'blue'" variant="tonal"
                         class="text-uppercase">
-                        {{ item.type === 'service' ? 'Paslauga' : 'Produktas' }}
+                        {{ item.typeData.label }}
                     </v-chip>
                 </template>
 
@@ -193,19 +194,19 @@ const headers = [
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense class="mt-2">
-
-                            <v-col cols="8">
-                                <v-text-field v-model="form.label" label="Pavadinimas" variant="outlined"
-                                    density="compact" autofocus></v-text-field>
-                            </v-col>
                             <v-col cols="4">
                                 <v-text-field v-model="form.code" label="Kodas" variant="outlined"
                                     density="compact"></v-text-field>
                             </v-col>
 
+                            <v-col cols="8">
+                                <v-text-field v-model="form.label" label="Pavadinimas" variant="outlined"
+                                    density="compact" autofocus></v-text-field>
+                            </v-col>
+
                             <v-col cols="6">
-                                <v-select v-model="form.type" :items="['product', 'service']" label="Tipas"
-                                    variant="outlined" density="compact">
+                                <v-select v-model="form.type" :items="productTypes || []" item-title="label"
+                                    item-value="_id" label="Tipas" variant="outlined" density="compact">
                                 </v-select>
                             </v-col>
                             <v-col cols="6">
@@ -251,7 +252,8 @@ const headers = [
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn variant="text" @click="deleteDialog = false">Atšaukti</v-btn>
-                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archyvuoti</v-btn>
+                    <v-btn color="orange" variant="flat" :loading="isArchiving"
+                        @click="handleArchive">Archyvuoti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

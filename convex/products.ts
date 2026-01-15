@@ -8,27 +8,38 @@ export const list = query({
         showArchived: v.optional(v.boolean())
     },
     handler: async (ctx, args) => {
-        // Fetch all products
+        // 1. Fetch all Product Types
+        const allTypes = await ctx.db.query("product_types").collect();
+
+        // ✅ FIX: Map by ID (_id), not by key
+        const typeMap = new Map();
+        allTypes.forEach(t => typeMap.set(t._id, t));
+
+        // 2. Fetch all products
         const products = await ctx.db.query("products").collect();
 
-        // Filter based on archived status
+        // 3. Filter
         const filtered = products.filter(p =>
             args.showArchived ? true : !p.archived
         );
 
-        // JOIN: Fetch unit details for every product efficiently
-        // (We map over products and fetch the unit for each)
-        const productsWithUnits = await Promise.all(
+        // 4. JOIN
+        const productsWithDetails = await Promise.all(
             filtered.map(async (p) => {
                 const unit = await ctx.db.get(p.unit);
+
+                // ✅ FIX: Lookup using the ID stored in p.type
+                const typeInfo = typeMap.get(p.type);
+
                 return {
                     ...p,
-                    unitData: unit // We attach the full unit object here
+                    unitData: unit,
+                    typeData: typeInfo || null
                 };
             })
         );
 
-        return productsWithUnits;
+        return productsWithDetails;
     },
 });
 
@@ -36,9 +47,18 @@ export const list = query({
 export const create = mutation({
     args: { ...productFields },
     handler: async (ctx, args) => {
+        const existing = await ctx.db
+            .query("products")
+            .withIndex("by_code", (q) => q.eq("code", args.code))
+            .first();
+
+        if (existing) throw new Error(`Product code '${args.code}' already exists`);
         // ... your existing create logic ...
         // (Copy from previous steps if needed, ensuring archived defaults to false)
-        return await ctx.db.insert("products", args);
+        return await ctx.db.insert("products", {
+            ...args,
+            archived: false
+        });
     },
 });
 
