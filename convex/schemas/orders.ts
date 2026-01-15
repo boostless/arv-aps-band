@@ -2,8 +2,9 @@
 import { v } from 'convex/values';
 
 export const orderFields = {
-    invoice_number: v.number(),  // e.g. 1001
+    contract_number: v.number(),  // e.g. 1001
     customer: v.id('customers'),
+    next_billing_date: v.optional(v.number()),
 
     // Dates
     start_date: v.number(),      // Unix timestamp
@@ -45,4 +46,9 @@ export const orderItemFields = {
     returned_quantity: v.optional(v.number()),
 
     total: v.number(),       // (Price * Qty) * (1 - Discount)
+
+    return_history: v.optional(v.array(v.object({
+        date: v.number(),
+        qty: v.number()
+    }))),
 };

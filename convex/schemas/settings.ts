@@ -23,4 +23,5 @@ export const settingsFields = {
             swift: v.optional(v.string()),
         })
     ),
+    invoice_due_days: v.optional(v.number()),
 };

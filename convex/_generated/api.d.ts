@@ -10,10 +10,14 @@
 
 import type * as customers from "../customers.js";
 import type * as dashboard from "../dashboard.js";
+import type * as invoices from "../invoices.js";
 import type * as orders from "../orders.js";
+import type * as payments from "../payments.js";
 import type * as products from "../products.js";
 import type * as schemas_customers from "../schemas/customers.js";
+import type * as schemas_invoices from "../schemas/invoices.js";
 import type * as schemas_orders from "../schemas/orders.js";
+import type * as schemas_payments from "../schemas/payments.js";
 import type * as schemas_products from "../schemas/products.js";
 import type * as schemas_settings from "../schemas/settings.js";
 import type * as schemas_stock from "../schemas/stock.js";
@@ -34,10 +38,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   customers: typeof customers;
   dashboard: typeof dashboard;
+  invoices: typeof invoices;
   orders: typeof orders;
+  payments: typeof payments;
   products: typeof products;
   "schemas/customers": typeof schemas_customers;
+  "schemas/invoices": typeof schemas_invoices;
   "schemas/orders": typeof schemas_orders;
+  "schemas/payments": typeof schemas_payments;
   "schemas/products": typeof schemas_products;
   "schemas/settings": typeof schemas_settings;
   "schemas/stock": typeof schemas_stock;

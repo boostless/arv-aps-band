@@ -8,6 +8,8 @@ import { stockLogFields } from "./schemas/stockLogs";
 import { settingsFields } from "./schemas/settings";
 import { customerFields } from "./schemas/customers";
 import { orderFields, orderItemFields } from "./schemas/orders";
+import { paymentFields } from "./schemas/payments";
+import { invoiceFields } from "./schemas/invoices";
 
 export default defineSchema({
     products: defineTable(productFields)
@@ -29,9 +31,14 @@ export default defineSchema({
         .index("by_code", ["code"]), // Unique constraint check
     orders: defineTable(orderFields)
         .index("by_customer", ["customer"])
-        .index("by_invoice", ["invoice_number"])
+        .index("by_contract", ["contract_number"])
         .index("by_status", ["status"]),
     order_items: defineTable(orderItemFields)
         .index("by_order", ["order_id"])      // "Get all items for this order"
         .index("by_product", ["product"]),    // "How many times was this rented?"
+    payments: defineTable(paymentFields)
+        .index("by_invoice", ["invoice_id"]),
+    invoices: defineTable(invoiceFields)
+        .index("by_order", ["order_id"])
+        .index("by_number", ["invoice_number"]),
 });

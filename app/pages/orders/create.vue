@@ -19,8 +19,8 @@ const form = ref({
     customer: null as Id<'customers'> | null,
     start_date: new Date().toISOString().substr(0, 10), // YYYY-MM-DD
     end_date: null as string | null,
-    type: 'rental' as 'rental' | 'sale',
     notes: '',
+    type: 'rental' as 'rental' | 'sale',
     items: [] as any[]
 });
 
@@ -28,7 +28,7 @@ const form = ref({
 function addItem() {
     form.value.items.push({
         productId: null,
-        warehouseId: null, // User must pick where to take it from
+        warehouseId: null,
         quantity: 1,
         priceDisplay: 0,
         discount: 0,
@@ -47,29 +47,68 @@ function onProductSelect(item: any, product: any) {
     if (!product) return;
 
     item.productId = product._id;
-    item.productObj = product; // Keep full object for label/code
+    item.productObj = product;
     item.type = product.type;
-    item.priceDisplay = form.value.type == 'rental' ? product.daily_rental_price / 100 : product.price / 100; // Convert cents to dollars
 
-    // Auto-select first warehouse if available, or leave null
+    // Auto-select warehouse
     if (warehouses.value && warehouses.value.length > 0) {
         item.warehouseId = warehouses.value[0]._id;
     }
+
+    // SET PRICE BASED ON TYPE
+    updateItemPrice(item);
 }
+
+// 2. NEW: HELPER TO UPDATE PRICE
+function updateItemPrice(item: any) {
+    if (!item.productObj) return;
+
+    if (form.value.type === 'rental') {
+        // Use Daily Rental Price (fallback to 0 or standard price if missing)
+        const rentPrice = item.productObj.daily_rental_price || 0;
+        item.priceDisplay = rentPrice / 100;
+    } else {
+        // Use Sale Price
+        const salePrice = item.productObj.price || 0;
+        item.priceDisplay = salePrice / 100;
+    }
+}
+
+watch(() => form.value.type, (newType) => {
+    form.value.items.forEach(item => {
+        updateItemPrice(item);
+    });
+});
 
 // -- TOTALS CALCULATION --
 const grandTotal = computed(() => {
     if (!settings.value) return 0;
 
-    const subtotal = form.value.items.reduce((sum, item) => {
+    // 1. Calculate Net Subtotal (Price * Qty - Discount)
+    const netSubtotal = form.value.items.reduce((sum, item) => {
+        const price = item.priceDisplay || 0;
+        const qty = item.quantity || 0;
+        const disc = item.discount || 0;
+
+        const lineTotal = price * qty * (1 - disc / 100);
+        return sum + lineTotal;
+    }, 0);
+
+    // 2. Add Tax
+    const tax = netSubtotal * (settings.value.tax_rate / 100);
+
+    return netSubtotal + tax;
+});
+
+const subtotalDisplay = computed(() => {
+    if (!settings.value) return 0;
+    // Reverse calc from Grand Total isn't needed if we build up
+    return form.value.items.reduce((sum, item) => {
         const price = item.priceDisplay || 0;
         const qty = item.quantity || 0;
         const disc = item.discount || 0;
         return sum + (price * qty * (1 - disc / 100));
     }, 0);
-
-    const tax = subtotal * (settings.value.tax_rate / 100);
-    return subtotal + tax;
 });
 
 // -- SUBMIT --
@@ -86,7 +125,7 @@ async function handleSubmit() {
     // Validate all items have warehouse
     for (const item of form.value.items) {
         if (item.type === 'product' && !item.warehouseId) {
-            showToast(`Please select a warehouse for ${item.productObj?.label}`, 'error');
+            showToast(`Please select a warehouse for ${item.productObj?.label || 'Item'}`, 'error');
             return;
         }
     }
@@ -113,8 +152,8 @@ async function handleSubmit() {
             notes: form.value.notes
         });
 
-        showToast('Order created successfully', 'success');
-        router.push('/orders'); // Redirect to list (we'll make this later)
+        showToast('Contract created successfully', 'success');
+        router.push('/orders');
 
     } catch (err: any) {
         showToast(err.toString().replace('Error: ', ''), 'error');
@@ -125,10 +164,13 @@ async function handleSubmit() {
 <template>
     <div class="pb-12">
         <div class="d-flex justify-space-between mb-6">
-            <h1 class="text-h4 font-weight-bold">Create Order</h1>
-            <div v-if="settings" class="text-h6 text-medium-emphasis">
-                Next Invoice: #{{ settings.invoice_start_number }}
+            <div>
+                <h1 class="text-h4 font-weight-bold">Create Contract</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">
+                    {{ form.type === 'rental' ? 'New Rental Agreement' : 'New Sale Order' }}
+                </div>
             </div>
+
         </div>
 
         <v-form @submit.prevent="handleSubmit">
@@ -157,7 +199,7 @@ async function handleSubmit() {
                             </v-row>
                             <v-row dense class="mt-2">
                                 <v-col cols="12">
-                                    <v-textarea v-model="form.notes" label="Order Notes / Instructions"
+                                    <v-textarea v-model="form.notes" label="Contract Notes / Instructions"
                                         placeholder="e.g. Deliver to the back gate, Call upon arrival..." rows="2"
                                         variant="outlined" density="comfortable" hide-details></v-textarea>
                                 </v-col>
@@ -201,8 +243,9 @@ async function handleSubmit() {
                                     </td>
 
                                     <td>
-                                        <v-text-field v-model.number="item.priceDisplay" type="number" prefix="$"
-                                            variant="plain" hide-details density="compact"></v-text-field>
+                                        <v-text-field v-model.number="item.priceDisplay" type="number" prefix="€"
+                                            variant="plain" hide-details density="compact"
+                                            :label="form.type === 'rental' ? 'Daily Rate' : 'Unit Price'"></v-text-field>
                                     </td>
 
                                     <td>
@@ -211,7 +254,7 @@ async function handleSubmit() {
                                     </td>
 
                                     <td class="text-right font-weight-bold">
-                                        ${{ (item.priceDisplay * item.quantity * (1 - item.discount / 100)).toFixed(2)
+                                        €{{ (item.priceDisplay * item.quantity * (1 - item.discount / 100)).toFixed(2)
                                         }}
                                     </td>
 
@@ -236,24 +279,26 @@ async function handleSubmit() {
                         <v-card-text>
                             <div class="d-flex justify-space-between mb-2">
                                 <span>Subtotal</span>
-                                <span class="font-weight-medium">${{ (grandTotal / (1 + (settings?.tax_rate ||
-                                    21) / 100)).toFixed(2) }}</span>
+                                <span class="font-weight-medium">€{{ subtotalDisplay.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-space-between mb-4">
-                                <span>VAT ({{ settings?.tax_rate }}%)</span>
-                                <span class="font-weight-medium">${{ (grandTotal - (grandTotal / (1 +
-                                    (settings?.tax_rate || 21) / 100))).toFixed(2) }}</span>
+                                <span>VAT ({{ settings?.tax_rate || 21 }}%)</span>
+                                <span class="font-weight-medium">€{{ (grandTotal - subtotalDisplay).toFixed(2) }}</span>
                             </div>
                             <v-divider class="mb-4"></v-divider>
                             <div class="d-flex justify-space-between text-h5 font-weight-bold">
-                                <span>Total</span>
-                                <span>${{ grandTotal.toFixed(2) }}</span>
+                                <span>Estimated Total</span>
+                                <span>€{{ grandTotal.toFixed(2) }}</span>
+                            </div>
+                            <div v-if="form.type === 'rental'"
+                                class="text-caption text-right text-medium-emphasis mt-1">
+                                (Per Day)
                             </div>
                         </v-card-text>
                         <v-card-actions class="pa-4">
                             <v-btn block color="success" size="large" variant="flat" :loading="isSubmitting"
                                 @click="handleSubmit">
-                                Create Order
+                                Create Contract
                             </v-btn>
                         </v-card-actions>
                     </v-card>

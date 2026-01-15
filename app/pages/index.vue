@@ -6,10 +6,13 @@ const { data: dashboard, isPending } = useConvexQuery(api.dashboard.getStats, {}
 
 // -- UTILS --
 function formatDate(timestamp: number) {
-    // Short format: "Jan 14, 10:30"
     return new Date(timestamp).toLocaleString('lt-LT', {
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        month: 'short', day: 'numeric' // Short date
     });
+}
+
+function formatMoney(cents: number) {
+    return (cents / 100).toFixed(2);
 }
 
 function getDeltaColor(delta: number) {
@@ -18,21 +21,18 @@ function getDeltaColor(delta: number) {
     return 'text-grey';
 }
 
-// Helper function for Log Colors
 function getLogColor(type: string) {
     switch (type) {
-        case 'purchase': return 'teal';        // Buying stock (Investment)
-        case 'initial': return 'teal-lighten-1'; // Starting stock
-        case 'sale': return 'blue-darken-2';   // Selling (Revenue)
-        case 'rental_out': return 'orange-darken-2'; // Rented (Out of warehouse)
-        case 'return': return 'success';       // Coming back (Good!)
-        case 'transfer': return 'purple';      // Moving around
-        case 'audit': return 'error';          // Correction/Lost item
+        case 'purchase': return 'teal';
+        case 'sale': return 'blue-darken-2';
+        case 'rental_out': return 'orange-darken-2';
+        case 'return': return 'success';
+        case 'transfer': return 'purple';
+        case 'audit': return 'error';
         default: return 'grey';
     }
 }
 
-// Optional: Helper for Icons (Bonus visual cue)
 function getLogIcon(type: string) {
     switch (type) {
         case 'purchase': return 'mdi-cash-minus';
@@ -48,7 +48,15 @@ function getLogIcon(type: string) {
 
 <template>
     <div>
-        <h1 class="text-h4 font-weight-bold mb-6">Apžvalga</h1>
+        <div class="d-flex align-center justify-space-between mb-6">
+            <h1 class="text-h4 font-weight-bold">Apžvalga</h1>
+
+            <div>
+                <v-btn to="/orders/create" color="primary" prepend-icon="mdi-plus" class="mr-2">
+                    Naujas užsakymas
+                </v-btn>
+            </div>
+        </div>
 
         <v-row>
             <v-col cols="12" md="6">
@@ -57,38 +65,35 @@ function getLogIcon(type: string) {
                         <template v-slot:prepend>
                             <v-icon color="primary" class="mr-2">mdi-clock-outline</v-icon>
                         </template>
-                        <v-card-title>Esami užsakymai</v-card-title>
-                        <v-card-subtitle>Naujausi aktyvūs nuomos ir pardavimai</v-card-subtitle>
-
+                        <v-card-title>Aktyvios sutartys</v-card-title>
+                        <v-card-subtitle>Įranga, kuri šiuo metu išnuomota</v-card-subtitle>
                         <template v-slot:append>
-                            <v-btn variant="text" size="small" color="primary" to="/orders">Peržiūrėti visus</v-btn>
+                            <v-btn variant="text" size="small" color="primary" to="/orders">Visos</v-btn>
                         </template>
                     </v-card-item>
 
                     <v-divider></v-divider>
 
-                    <v-table density="compact" class="mt-2">
+                    <v-table density="compact">
                         <thead>
                             <tr>
-                                <th>Sąskaita</th>
+                                <th>Nr.</th>
                                 <th>Klientas</th>
-                                <th>Data</th>
                                 <th class="text-end">Veiksmas</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="order in dashboard?.activeOrders" :key="order._id">
-                                <td class="font-weight-medium">#{{ order.invoice_number }}</td>
-                                <td>{{ order.customerName }}</td>
-                                <td class="text-caption text-grey">{{ formatDate(order.start_date) }}</td>
+                                <td class="font-weight-medium">#{{ order.contract_number }}</td>
+                                <td class="text-truncate" style="max-width: 150px;">{{ order.customerName }}</td>
                                 <td class="text-end">
                                     <v-btn icon="mdi-chevron-right" size="x-small" variant="text"
                                         :to="`/orders/${order._id}`"></v-btn>
                                 </td>
                             </tr>
                             <tr v-if="dashboard?.activeOrders.length === 0">
-                                <td colspan="4" class="text-center text-caption text-grey py-4">
-                                    Šiuo metu nėra aktyvių užsakymų.
+                                <td colspan="3" class="text-center text-caption text-grey py-4">
+                                    Nėra aktyvių sutarčių.
                                 </td>
                             </tr>
                         </tbody>
@@ -97,24 +102,54 @@ function getLogIcon(type: string) {
             </v-col>
 
             <v-col cols="12" md="6">
-                <v-row dense>
-                    <v-col cols="6">
-                        <v-card color="primary" variant="tonal" class="pa-4 h-100" to="/orders/create">
-                            <div class="text-h6 font-weight-bold">Naujas užsakymas</div>
-                            <div class="text-caption">Sukurti pardavimą arba nuomą</div>
-                            <v-icon size="40" class="position-absolute"
-                                style="bottom: 10px; right: 10px; opacity: 0.2">mdi-file-document-plus</v-icon>
-                        </v-card>
-                    </v-col>
-                    <v-col cols="6">
-                        <v-card color="orange" variant="tonal" class="pa-4 h-100" to="/warehouses">
-                            <div class="text-h6 font-weight-bold">Sandėliai</div>
-                            <div class="text-caption">Peržiūrėti sandėlių likučius</div>
-                            <v-icon size="40" class="position-absolute"
-                                style="bottom: 10px; right: 10px; opacity: 0.2">mdi-package-variant</v-icon>
-                        </v-card>
-                    </v-col>
-                </v-row>
+                <v-card border flat class="h-100">
+                    <v-card-item>
+                        <template v-slot:prepend>
+                            <v-icon color="red-darken-2" class="mr-2">mdi-alert-circle-outline</v-icon>
+                        </template>
+                        <v-card-title>Neapmokėtos sąskaitos</v-card-title>
+                        <v-card-subtitle>Apmokėjimo laukiantys dokumentai</v-card-subtitle>
+                        <template v-slot:append>
+                            <v-btn variant="text" size="small" color="primary" to="/invoices">Visos</v-btn>
+                        </template>
+                    </v-card-item>
+
+                    <v-divider></v-divider>
+
+                    <v-table density="compact">
+                        <thead>
+                            <tr>
+                                <th>Sąskaita</th>
+                                <th>Terminas</th>
+                                <th class="text-end">Liko mokėti</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="inv in dashboard?.unpaidInvoices" :key="inv._id">
+                                <td class="font-weight-medium">#{{ inv.invoice_number }}</td>
+                                <td>
+                                    <span :class="inv.isOverdue ? 'text-error font-weight-bold' : ''">
+                                        {{ formatDate(inv.end_date) }}
+                                    </span>
+                                </td>
+                                <td class="text-end font-weight-bold text-error">
+                                    €{{ formatMoney(inv.remainingAmount) }}
+                                </td>
+                                <td class="text-end">
+                                    <v-btn icon="mdi-arrow-right" size="x-small" variant="text" color="primary"
+                                        :to="`/invoices/${inv._id}`"></v-btn>
+                                </td>
+                            </tr>
+                            <tr v-if="dashboard?.unpaidInvoices.length === 0">
+                                <td colspan="4" class="text-center text-caption text-success py-4">
+                                    <v-icon color="success" class="mb-1">mdi-check-circle</v-icon><br>
+                                    Visos sąskaitos apmokėtos!
+                                </td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                </v-card>
             </v-col>
         </v-row>
 
@@ -123,8 +158,7 @@ function getLogIcon(type: string) {
                 <template v-slot:prepend>
                     <v-icon color="blue-grey" class="mr-2">mdi-history</v-icon>
                 </template>
-                <v-card-title>Naujausia veikla</v-card-title>
-                <v-card-subtitle>Sandėlio judėjimai ir koregavimai</v-card-subtitle>
+                <v-card-title>Sandėlio istorija</v-card-title>
             </v-card-item>
 
             <v-divider></v-divider>
@@ -136,8 +170,8 @@ function getLogIcon(type: string) {
                         <th>Tipas</th>
                         <th>Produktas</th>
                         <th>Sandėlis</th>
-                        <th class="text-end">Pokytis</th>
-                        <th>Nuoroda</th>
+                        <th class="text-end">Kiekis</th>
+                        <th>Pastabos</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -145,25 +179,19 @@ function getLogIcon(type: string) {
                         <td class="text-caption text-medium-emphasis" style="width: 140px">
                             {{ formatDate(log._creationTime) }}
                         </td>
-
                         <td>
                             <v-chip size="x-small" label variant="tonal" class="font-weight-bold text-uppercase"
                                 :color="getLogColor(log.type)" :prepend-icon="getLogIcon(log.type)">
                                 {{ localeStatus[log.type] || log.type }}
                             </v-chip>
                         </td>
-
                         <td class="font-weight-medium">{{ log.productName }}</td>
                         <td class="text-caption">{{ log.warehouseCode }}</td>
-
                         <td class="text-end font-weight-bold" :class="getDeltaColor(log.delta)">
                             {{ log.delta > 0 ? '+' : '' }}{{ log.delta }}
                         </td>
-
-                        <td class="text-caption text-grey" style="max-width: 200px;">
-                            <div class="text-truncate">
-                                {{ log.reference_id || log.notes }}
-                            </div>
+                        <td class="text-caption text-grey text-truncate" style="max-width: 200px;">
+                            {{ log.reference_id || log.notes }}
                         </td>
                     </tr>
                 </tbody>

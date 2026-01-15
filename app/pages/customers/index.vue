@@ -66,10 +66,10 @@ async function handleArchive() {
     if (!itemToDelete.value) return;
     try {
         await archiveCustomer({ id: itemToDelete.value });
-        showToast('Customer archived', 'success');
+        showToast('Klientas archyvuotas', 'success');
         deleteDialog.value = false;
     } catch (err: any) {
-        showToast('Failed to archive', 'error');
+        showToast('Nepavyko archyvuoti kliento', 'error');
     }
 }
 
@@ -90,10 +90,10 @@ async function handleSubmit() {
 
         if (editingId.value) {
             await updateCustomer({ id: editingId.value, ...payload });
-            showToast('Customer updated', 'success');
+            showToast('Klientas atnaujintas', 'success');
         } else {
             await createCustomer(payload);
-            showToast('Customer created', 'success');
+            showToast('Klientas sukurtas', 'success');
         }
         dialog.value = false;
     } catch (err: any) {
@@ -103,11 +103,11 @@ async function handleSubmit() {
 
 // 4. UPDATE HEADERS (Added Contact column)
 const headers = [
-    { title: 'Customer', key: 'label' },
-    { title: 'Code', key: 'code' },
-    { title: 'Contact', key: 'contact', sortable: false }, // <--- NEW
-    { title: 'Company Details', key: 'company_code' },     // Renamed for clarity
-    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Kodas', key: 'code' },
+    { title: 'Klientas', key: 'label' },
+    { title: 'Kontaktai', key: 'contact', sortable: false }, // <--- NEW
+    { title: 'Įmonės duomenys', key: 'company_code' },     // Renamed for clarity
+    { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
 </script>
 
@@ -115,15 +115,16 @@ const headers = [
     <div>
         <div class="d-flex align-center justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Customers</h1>
-                <div class="text-subtitle-1 text-medium-emphasis">Manage client database</div>
+                <h1 class="text-h4 font-weight-bold">Klientai</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">Valdykite klientų duomenų bazę</div>
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">
-                Add Customer
+                Pridėti klientą
             </v-btn>
         </div>
 
-        <v-switch v-model="showArchived" label="Show Archived" color="primary" hide-details class="mb-4"></v-switch>
+        <v-switch v-model="showArchived" label="Rodyti archyvuotus" color="primary" hide-details
+            class="mb-4"></v-switch>
 
         <v-card border flat>
             <v-data-table :headers="headers" :items="customers || []" :loading="isLoading" hover>
@@ -146,6 +147,10 @@ const headers = [
                 </template>
 
                 <template v-slot:item.actions="{ item }">
+                    <v-btn icon="mdi-eye-outline" size="small" variant="text" color="primary"
+                        :to="`/customers/${item._id}`">
+                        <v-icon>mdi-eye-outline</v-icon>
+                        <v-tooltip activator="parent" location="top">Peržiūrėti istoriją</v-tooltip></v-btn>
                     <v-btn icon="mdi-pencil" size="small" variant="text" color="primary"
                         @click="openEdit(item)"></v-btn>
                     <v-btn icon="mdi-archive" size="small" variant="text" color="orange"

@@ -1,12 +1,20 @@
 // convex/orders.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { generateInvoiceInternal } from "./invoices"; // ✅ Import logic
 
-// Helper to get next invoice number
-async function getNextInvoiceNumber(ctx: any) {
+// 1. HELPER: Get Next Contract Number
+// (We reuse the invoice_start_number or you can add a separate 'contract_start_number' to settings)
+async function getNextContractNumber(ctx: any) {
     const settings = await ctx.db.query("business_settings").first();
-    if (!settings) throw new Error("Please configure Business Settings first (Invoice #)");
-    return settings;
+    const num = settings?.invoice_start_number || 1000;
+
+    // Increment the counter so the next one is unique
+    if (settings) {
+        await ctx.db.patch(settings._id, { invoice_start_number: num + 1 });
+    }
+
+    return num;
 }
 
 export const create = mutation({
@@ -17,34 +25,28 @@ export const create = mutation({
         type: v.union(v.literal('rental'), v.literal('sale')),
         created_by: v.optional(v.string()),
         notes: v.optional(v.string()),
-
-        // The items payload
         items: v.array(v.object({
             product: v.id("products"),
             warehouse: v.id("warehouses"),
             quantity: v.number(),
-            price: v.number(),   // Cents
-            discount: v.number(), // Percentage (0-100)
-            // We pass these in to avoid extra DB lookups, but we trust the frontend
+            price: v.number(),
+            discount: v.number(),
             label: v.string(),
             code: v.string(),
             product_type: v.union(v.literal('product'), v.literal('service')),
         }))
     },
     handler: async (ctx, args) => {
-        // 1. GET & INCREMENT INVOICE NUMBER
-        const settings = await getNextInvoiceNumber(ctx);
-        const invoiceNum = settings.invoice_start_number;
+        // 2. FETCH SETTINGS (For Tax Rate)
+        const settings = await ctx.db.query("business_settings").first();
+        const taxRate = settings?.tax_rate || 21;
 
-        // Atomically update the next number
-        await ctx.db.patch(settings._id, {
-            invoice_start_number: invoiceNum + 1
-        });
+        // 3. GENERATE CONTRACT NUMBER
+        const contractNum = await getNextContractNumber(ctx);
 
-        // 2. CALCULATE TOTALS
+        // 4. CALCULATE TOTALS
         let subtotal = 0;
         const itemsWithTotals = args.items.map(item => {
-            // Math: Price * Qty * (1 - Discount/100)
             const itemTotal = Math.round(
                 (item.price * item.quantity) * (1 - (item.discount / 100))
             );
@@ -52,36 +54,36 @@ export const create = mutation({
             return { ...item, total: itemTotal };
         });
 
-        const taxAmount = Math.round(subtotal * (settings.tax_rate / 100));
-        const finalTotal = subtotal + taxAmount;
+        // Calculate Tax
+        const taxAmount = Math.round(subtotal * (taxRate / 100));
 
-        // 3. CREATE ORDER
+        // 5. CREATE ORDER (With all required fields)
         const orderId = await ctx.db.insert("orders", {
-            invoice_number: invoiceNum,
             customer: args.customer,
             start_date: args.start_date,
             end_date: args.end_date,
-            status: args.type == 'sale' ? 'completed' : 'active', // Default to active
+            status: args.type === 'sale' ? 'completed' : 'active',
             type: args.type,
-            total_amount: finalTotal,
-            tax_amount: taxAmount,
+
+            contract_number: contractNum, // <--- FIXED: Added this
+            total_amount: subtotal,
+            tax_amount: taxAmount,        // <--- FIXED: Added this
+
             created_by: args.created_by || 'System',
             notes: args.notes,
         });
 
-        // 4. CREATE ITEMS & DEDUCT STOCK
+        // ... (Rest of the function: Insert Items & Stock Logs) ...
+
+        // 6. CREATE ITEMS & DEDUCT STOCK
         for (const item of itemsWithTotals) {
-            // A. Insert Line Item
             await ctx.db.insert("order_items", {
                 order_id: orderId,
-                ...item
+                ...item,
+                returned_quantity: 0
             });
 
-            // B. HANDLE STOCK MOVEMENT
-            // ONLY if it is a physical product (not a service)
             if (item.product_type === 'product') {
-
-                // Reuse the logic from your stock.ts file (but inline for safety)
                 const stockRecord = await ctx.db
                     .query("stock")
                     .withIndex("by_product_warehouse", q =>
@@ -89,36 +91,26 @@ export const create = mutation({
                     )
                     .unique();
 
-                // Safety Check: Do we have enough? 
-                // (Remove this check if you allow negative stock/backorders)
-                if (!stockRecord || stockRecord.quantity < item.quantity) {
-                    throw new Error(`Insufficient stock for ${item.label} in chosen warehouse.`);
-                }
-
                 const currentQty = stockRecord ? stockRecord.quantity : 0;
+                const newQty = currentQty - item.quantity;
 
-                // Deduct
                 if (stockRecord) {
-                    await ctx.db.patch(stockRecord._id, {
-                        quantity: currentQty - item.quantity
-                    });
+                    await ctx.db.patch(stockRecord._id, { quantity: newQty });
                 } else {
-                    // Technically possible to have 0 record, so we create a negative one
                     await ctx.db.insert("stock", {
                         product: item.product,
                         warehouse: item.warehouse,
-                        quantity: -item.quantity
+                        quantity: newQty
                     });
                 }
 
-                // C. LOG THE MOVEMENT (Audit Trail)
                 await ctx.db.insert("stock_logs", {
                     product: item.product,
                     warehouse: item.warehouse,
-                    delta: -item.quantity, // Negative because we are taking it
-                    resulting_quantity: currentQty - item.quantity,
-                    type: args.type == 'sale' ? 'sale' : 'rental_out',
-                    reference_id: `INV-${invoiceNum}`,
+                    delta: -item.quantity,
+                    resulting_quantity: newQty,
+                    type: args.type === 'sale' ? 'sale' : 'rental_out',
+                    reference_id: `ORD-${contractNum}`, // Use contract # for friendly display
                     notes: `Order for ${args.created_by || 'Customer'}`
                 });
             }
@@ -131,10 +123,8 @@ export const create = mutation({
 export const list = query({
     args: {},
     handler: async (ctx) => {
-        // 1. Get all orders, sorted by creation (newest first)
         const orders = await ctx.db.query("orders").order("desc").collect();
 
-        // 2. Join with Customer data efficiently
         const ordersWithDetails = await Promise.all(
             orders.map(async (order) => {
                 const customer = await ctx.db.get(order.customer);
@@ -157,29 +147,43 @@ export const get = query({
 
         const customer = await ctx.db.get(order.customer);
         const settings = await ctx.db.query("business_settings").first();
-
-        // Fetch line items
         const items = await ctx.db
             .query("order_items")
             .withIndex("by_order", (q) => q.eq("order_id", args.id))
             .collect();
 
-        // Enhance items with warehouse codes (optional, but good for internal use)
-        const itemsWithDetails = await Promise.all(
-            items.map(async (item) => {
-                const warehouse = await ctx.db.get(item.warehouse);
-                return {
-                    ...item,
-                    warehouseCode: warehouse?.code || 'Unknown'
-                };
-            })
-        );
+        const invoices = await ctx.db
+            .query("invoices")
+            .withIndex("by_order", (q) => q.eq("order_id", args.id))
+            .collect();
+
+        // ✅ NEW: Calculate Active Daily Rate
+        let activeDailyRate = 0;
+
+        if (order.type === 'rental') {
+            for (const item of items) {
+                // Only products count towards daily rate (not one-off services like Delivery)
+                if (item.product_type === 'product') {
+                    const returned = item.returned_quantity || 0;
+                    const activeQty = Math.max(0, item.quantity - returned);
+
+                    // Price calculation: Price * Qty * Discount
+                    const lineTotal = item.price * activeQty * (1 - (item.discount / 100));
+                    activeDailyRate += lineTotal;
+                }
+            }
+        } else {
+            // For sales, the "active rate" is 0 because it's a one-time charge
+            activeDailyRate = 0;
+        }
 
         return {
             ...order,
             customer,
-            items: itemsWithDetails,
-            settings
+            items,
+            settings,
+            invoices,
+            activeDailyRate // <--- Return this new value
         };
     },
 });
@@ -187,75 +191,99 @@ export const get = query({
 export const complete = mutation({
     args: { id: v.id("orders") },
     handler: async (ctx, args) => {
-        // 1. Get the order
         const order = await ctx.db.get(args.id);
         if (!order) throw new Error("Order not found");
-
-        // 2. Validate
         if (order.status !== 'active') throw new Error("Order is not active");
-        if (order.type !== 'rental') throw new Error("Only rental orders can be completed");
 
-        // 3. Get all items
+        // 1. PROCESS RETURNS (Mark everything as returned NOW)
         const items = await ctx.db
             .query("order_items")
             .withIndex("by_order", (q) => q.eq("order_id", args.id))
             .collect();
 
-        // 4. PROCESS RETURNS
         for (const item of items) {
             if (item.product_type === 'product') {
-
-                // CORRECTION: Calculate what is actually left to return
                 const alreadyReturned = item.returned_quantity || 0;
                 const remainingToReturn = item.quantity - alreadyReturned;
 
-                // If everything is already returned, skip stock adjustment
-                if (remainingToReturn <= 0) {
-                    // Ensure data consistency (just in case)
-                    if (remainingToReturn < 0) console.error("Data warning: More items returned than rented!");
-                    continue;
-                }
-
-                // 5. UPDATE ITEM RECORD
-                // Mark it as fully returned in the database
-                await ctx.db.patch(item._id, {
-                    returned_quantity: item.quantity
-                });
-
-                // 6. RESTORE STOCK (Only the remaining amount)
-                const stockRecord = await ctx.db
-                    .query("stock")
-                    .withIndex("by_product_warehouse", (q) =>
-                        q.eq("product", item.product).eq("warehouse", item.warehouse)
-                    )
-                    .unique();
-
-                if (stockRecord) {
-                    await ctx.db.patch(stockRecord._id, {
-                        quantity: stockRecord.quantity + remainingToReturn // <--- FIXED
+                if (remainingToReturn > 0) {
+                    // Update Item History
+                    await ctx.db.patch(item._id, {
+                        returned_quantity: item.quantity,
+                        return_history: [
+                            ...(item.return_history || []),
+                            { date: Date.now(), qty: remainingToReturn }
+                        ]
                     });
-                } else {
-                    await ctx.db.insert("stock", {
+
+                    // Restore Stock
+                    const stockRecord = await ctx.db
+                        .query("stock")
+                        .withIndex("by_product_warehouse", (q) =>
+                            q.eq("product", item.product).eq("warehouse", item.warehouse)
+                        )
+                        .unique();
+
+                    let newQty = 0;
+                    if (stockRecord) {
+                        newQty = stockRecord.quantity + remainingToReturn;
+                        await ctx.db.patch(stockRecord._id, { quantity: newQty });
+                    } else {
+                        newQty = remainingToReturn;
+                        await ctx.db.insert("stock", {
+                            product: item.product,
+                            warehouse: item.warehouse,
+                            quantity: newQty
+                        });
+                    }
+
+                    // Log
+                    await ctx.db.insert("stock_logs", {
                         product: item.product,
                         warehouse: item.warehouse,
-                        quantity: remainingToReturn // <--- FIXED
+                        delta: remainingToReturn,
+                        resulting_quantity: newQty,
+                        type: 'return',
+                        reference_id: `ORD-${order.contract_number} (Final)`,
+                        notes: 'Order completed (Auto-return)'
                     });
                 }
-
-                // 7. LOG
-                await ctx.db.insert("stock_logs", {
-                    product: item.product,
-                    warehouse: item.warehouse,
-                    delta: remainingToReturn,
-                    resulting_quantity: (stockRecord?.quantity || 0) + remainingToReturn,
-                    type: 'return',
-                    reference_id: `INV-${order.invoice_number} (Final)`,
-                    notes: 'Order completed (Rest of items returned)'
-                });
             }
         }
 
-        // 8. UPDATE ORDER STATUS
+        // 2. AUTO-GENERATE FINAL INVOICE
+        // Determine the period start: It's the day AFTER the last invoice ended.
+        const invoices = await ctx.db
+            .query("invoices")
+            .withIndex("by_order", q => q.eq("order_id", args.id))
+            .collect();
+
+        // Sort to find the latest invoice
+        const lastInvoice = invoices.sort((a, b) => b.end_date - a.end_date)[0];
+
+        let billingStart = order.start_date;
+        if (lastInvoice) {
+            // Start billing from the next day (roughly)
+            // Using timestamps: Add 24 hours to last end date
+            billingStart = lastInvoice.end_date + (24 * 60 * 60 * 1000);
+        }
+
+        const billingEnd = Date.now();
+
+        // Check if there is a valid time window (avoid negative dates)
+        // Only generate if billingStart is today or in the past
+        if (billingStart <= billingEnd) {
+            try {
+                // We don't await the ID, just let it happen.
+                // If it returns null (0 amount), that's fine.
+                await generateInvoiceInternal(ctx, args.id, billingStart, billingEnd);
+            } catch (e) {
+                console.error("Auto-invoice failed:", e);
+                // We suppress error so the Order still completes
+            }
+        }
+
+        // 3. CLOSE ORDER
         await ctx.db.patch(args.id, {
             status: 'completed',
             end_date: Date.now()
@@ -266,7 +294,6 @@ export const complete = mutation({
 export const returnPartial = mutation({
     args: {
         orderId: v.id("orders"),
-        // List of returns: { itemId: "...", returnQty: 5 }
         returns: v.array(v.object({
             itemId: v.id("order_items"),
             returnQty: v.number()
@@ -277,13 +304,13 @@ export const returnPartial = mutation({
         if (!order) throw new Error("Order not found");
         if (order.status !== 'active') throw new Error("Order is not active");
 
-        // Process each return
+        // 1. PROCESS THE RETURNS (Existing Logic)
         for (const ret of args.returns) {
             if (ret.returnQty <= 0) continue;
 
             const item = await ctx.db.get(ret.itemId);
             if (!item) continue;
-            if (item.product_type === 'service') continue; // Skip services
+            if (item.product_type === 'service') continue;
 
             const currentReturned = item.returned_quantity || 0;
             const remaining = item.quantity - currentReturned;
@@ -292,12 +319,16 @@ export const returnPartial = mutation({
                 throw new Error(`Cannot return ${ret.returnQty} of ${item.label}. Only ${remaining} out.`);
             }
 
-            // 1. UPDATE ITEM
+            // Update Item History
             await ctx.db.patch(ret.itemId, {
-                returned_quantity: currentReturned + ret.returnQty
+                returned_quantity: currentReturned + ret.returnQty,
+                return_history: [
+                    ...(item.return_history || []),
+                    { date: Date.now(), qty: ret.returnQty }
+                ]
             });
 
-            // 2. RESTORE STOCK
+            // Update Stock
             const stockRecord = await ctx.db
                 .query("stock")
                 .withIndex("by_product_warehouse", q =>
@@ -305,46 +336,74 @@ export const returnPartial = mutation({
                 )
                 .unique();
 
+            let newQty = 0;
             if (stockRecord) {
-                await ctx.db.patch(stockRecord._id, {
-                    quantity: stockRecord.quantity + ret.returnQty
-                });
+                newQty = stockRecord.quantity + ret.returnQty;
+                await ctx.db.patch(stockRecord._id, { quantity: newQty });
             } else {
+                newQty = ret.returnQty;
                 await ctx.db.insert("stock", {
                     product: item.product,
                     warehouse: item.warehouse,
-                    quantity: ret.returnQty
+                    quantity: newQty
                 });
             }
 
-            // 3. LOG
+            // Log
             await ctx.db.insert("stock_logs", {
                 product: item.product,
                 warehouse: item.warehouse,
                 delta: ret.returnQty,
-                resulting_quantity: (stockRecord?.quantity || 0) + ret.returnQty,
+                resulting_quantity: newQty,
                 type: 'return',
-                reference_id: `INV-${order.invoice_number}`,
+                reference_id: `ORD-${order.contract_number}`,
                 notes: `Partial return (${ret.returnQty})`
             });
         }
 
-        // 4. CHECK IF ORDER IS FULLY COMPLETE
-        // We re-fetch all items for this order to check their status
+        // 2. CHECK IF EVERYTHING IS RETURNED
         const allItems = await ctx.db
             .query("order_items")
             .withIndex("by_order", q => q.eq("order_id", args.orderId))
             .collect();
 
         const allReturned = allItems.every(item => {
-            // Services are always "returned"
             if (item.product_type === 'service') return true;
-            // Products must have returned >= quantity
             return (item.returned_quantity || 0) >= item.quantity;
         });
 
+        // ✅ NEW: IF ALL RETURNED -> AUTO INVOICE & COMPLETE
         if (allReturned) {
-            await ctx.db.patch(args.orderId, { status: 'completed' });
+
+            // A. Determine Billing Period (Gap since last invoice)
+            const invoices = await ctx.db
+                .query("invoices")
+                .withIndex("by_order", q => q.eq("order_id", args.orderId))
+                .collect();
+
+            const lastInvoice = invoices.sort((a, b) => b.end_date - a.end_date)[0];
+
+            let billingStart = order.start_date;
+            if (lastInvoice) {
+                // Start from the day after the last invoice
+                billingStart = lastInvoice.end_date + (24 * 60 * 60 * 1000);
+            }
+            const billingEnd = Date.now();
+
+            // B. Generate Final Invoice
+            if (billingStart <= billingEnd) {
+                try {
+                    await generateInvoiceInternal(ctx, args.orderId, billingStart, billingEnd);
+                } catch (e) {
+                    console.error("Auto-invoice on partial return failed (likely 0 amount):", e);
+                }
+            }
+
+            // C. Close Order
+            await ctx.db.patch(args.orderId, {
+                status: 'completed',
+                end_date: Date.now()
+            });
         }
     },
 });

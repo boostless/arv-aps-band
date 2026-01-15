@@ -23,6 +23,11 @@ const items = ref([
         icon: 'mdi-file-document-outline'
     },
     {
+        title: 'Sąskaitos',
+        to: '/invoices',
+        icon: 'mdi-receipt-text'
+    },
+    {
         title: 'Produktai',
         to: '/products',
         icon: 'mdi-tag-outline'
@@ -39,7 +44,7 @@ const items = ref([
         icon: 'mdi-warehouse'
     },
     {
-        title: 'Vienetai',
+        title: 'Mato vienetai',
         to: '/units',
         icon: 'mdi-ruler'
     },
