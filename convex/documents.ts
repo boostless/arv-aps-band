@@ -278,6 +278,134 @@ export const generateHandoverActAction = action({
         }
     }
 });
+
+async function generateInvoicePdfLogic(ctx: any, invoiceId: any, gotenbergUrl: string, isPreview: boolean) {
+    // 1. Fetch Basic Data
+    const settings = await ctx.runQuery(api.settings.get);
+    if (!settings?.invoice_template_id) throw new Error("No invoice template found");
+
+    const invoice = await ctx.runQuery(api.invoices.get, { id: invoiceId });
+    if (!invoice) throw new Error("Invoice not found");
+
+    const order = await ctx.runQuery(api.orders.get, { id: invoice.order_id });
+    if (!order) throw new Error("Order not found");
+
+    // 2. Fetch Types & Create Lookup Map
+    // We need to know: Type ID -> { key: "service", label: "Paslauga" }
+    const allTypes = await ctx.db.query("product_types").collect();
+    const typeMap = new Map();
+    allTypes.forEach(t => typeMap.set(t._id, t));
+
+    // 3. Fetch Products to find their Type
+    // We need to know: Product ID -> Type Info
+    const productIds = order.items.map((i: any) => i.product || i.product_id).filter(Boolean);
+
+    // Fetch all products involved (using the helper we made earlier or direct get)
+    const productTypeLookup = new Map(); // Maps Product Name -> Type Object
+
+    for (const id of productIds) {
+        // Handle both ID types just in case
+        const normalizedId = ctx.db.normalizeId("products", id as string);
+        if (normalizedId) {
+            const p = await ctx.db.get(normalizedId);
+            if (p && p.type) {
+                // p.type is the ID of the product_type
+                const typeInfo = typeMap.get(p.type);
+                if (typeInfo) {
+                    productTypeLookup.set(p.name, typeInfo);
+                }
+            }
+        }
+    }
+
+    // 4. Calculate Financial Breakdown (The Money)
+    const breakdown = await ctx.runQuery(internal.documents.calculateBreakdown, {
+        orderId: invoice.order_id,
+        start: invoice.start_date,
+        end: invoice.end_date
+    });
+
+    // 5. GROUPING LOGIC (The Magic)
+    const pdfLineItems = [];
+    const groups: Record<string, number> = {}; // { "Fasadiniai pastoliai": 150.00, "Moduliniai": 200.00 }
+
+    for (const item of breakdown.lineItems) {
+        // Try to find the type for this item
+        const typeInfo = productTypeLookup.get(item.label);
+
+        // Logic: Is it a Service?
+        const isService = typeInfo?.key === 'service';
+
+        if (isService) {
+            // SCENARIO A: It is a Service -> SHOW FULL NAME
+            pdfLineItems.push({
+                label: item.label, // e.g., "Montavimo darbai"
+                total: (item.amount / 100).toFixed(2),
+                weight: "-"
+            });
+        } else {
+            // SCENARIO B: It is a Product -> GROUP IT
+            // Use the Type Label as the group name (e.g., "Fasadiniai pastoliai")
+            // Fallback to "Pastoliai" if type is missing
+            const groupName = typeInfo?.label || "Pastoliai";
+
+            if (!groups[groupName]) groups[groupName] = 0;
+            groups[groupName] += item.amount;
+        }
+    }
+
+    // 6. Add Groups to PDF Lines
+    for (const [label, amount] of Object.entries(groups)) {
+        if (amount > 0) {
+            pdfLineItems.push({
+                label: `${label} nuoma`, // e.g. "Fasadiniai pastoliai nuoma"
+                total: (amount / 100).toFixed(2),
+                weight: "" // You can calculate total weight per group if you want, but usually left blank on invoice
+            });
+        }
+    }
+
+    // 7. Calculate Discount & Totals
+    const subtotal = (invoice.amount - invoice.tax_amount) / 100;
+    const discountVal = invoice.discount || 0;
+
+    // Calculate Total Weight (Optional, for the bottom summary)
+    let totalWeight = 0;
+    // ... (Your existing weight calculation logic here) ...
+
+    const templateData = {
+        invoice_number: invoice.invoice_number,
+        date: new Date(invoice.start_date).toLocaleDateString('lt-LT'),
+        due_date: new Date(invoice.due_date || Date.now()).toLocaleDateString('lt-LT'),
+        customer_name: invoice.customer_name,
+        customer_address: invoice.customer_address,
+        customer_vat: invoice.customer_vat || "",
+        seller_name: invoice.settings?.business_name,
+        seller_address: invoice.settings?.address,
+        seller_code: invoice.settings?.company_code,
+        seller_vat: invoice.settings?.vat_code,
+        seller_bank: invoice.settings?.banks?.[0]?.name,
+        seller_iban: invoice.settings?.banks?.[0]?.iban,
+
+        // ✅ OUR NEW GROUPED ITEMS
+        items: pdfLineItems,
+
+        subtotal: subtotal.toFixed(2),
+        discount: (discountVal / 100).toFixed(2),
+        tax: (invoice.tax_amount / 100).toFixed(2),
+        total: (invoice.amount / 100).toFixed(2),
+        created_by: invoice.created_by
+    };
+
+    // 8. Generate & Store
+    const templateUrl = await ctx.storage.getUrl(settings.invoice_template_id);
+    const templateRes = await fetch(templateUrl);
+    const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
+    const pdfBuffer = await convertToPdf(filledDocx, gotenbergUrl);
+
+    const storageId = await ctx.storage.store(new Blob([pdfBuffer], { type: "application/pdf" }));
+    return await ctx.storage.getUrl(storageId);
+}
 // ----------------------------------------------------------------------
 // 4. UTILS (Docx & Gotenberg)
 // ----------------------------------------------------------------------
