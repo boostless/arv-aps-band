@@ -15,7 +15,9 @@
     "convex-nuxt": "^0.1.5",
     "convex-vue": "^0.1.5",
     "currency.js": "^2.0.4",
+    "docxtemplater": "^3.67.6",
     "nuxt": "^4.2.2",
+    "pizzip": "^3.2.0",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4"
   },

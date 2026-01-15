@@ -234,6 +234,7 @@ const isOverdue = computed(() => {
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
+        max-width: 1920px !important;
     }
 
     /* Hide Vuetify default layout padding if needed */
