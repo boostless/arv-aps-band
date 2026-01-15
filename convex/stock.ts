@@ -72,7 +72,7 @@ export const adjust = mutation({
             delta: args.delta,
             resulting_quantity: newQty, // <--- THIS WAS MISSING
             notes: args.notes || "",
-            reference_id: "Manual Adjustment",
+            reference_id: "Rankinis pataisymas",
         });
     },
 });
@@ -97,6 +97,8 @@ export const listByWarehouse = query({
                     code: product?.code ?? "???",
                     quantity: entry.quantity,
                     unit: product?.unit, // Optional: if you need unit ID
+                    price: product?.price ?? 0, // Optional: if you need price
+                    daily_rental_price: product?.daily_rental_price ?? 0, // Optional: if you need rental price
                 };
             })
         );

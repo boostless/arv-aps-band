@@ -17,6 +17,33 @@ function getDeltaColor(delta: number) {
     if (delta < 0) return 'text-error';
     return 'text-grey';
 }
+
+// Helper function for Log Colors
+function getLogColor(type: string) {
+    switch (type) {
+        case 'purchase': return 'teal';        // Buying stock (Investment)
+        case 'initial': return 'teal-lighten-1'; // Starting stock
+        case 'sale': return 'blue-darken-2';   // Selling (Revenue)
+        case 'rental_out': return 'orange-darken-2'; // Rented (Out of warehouse)
+        case 'return': return 'success';       // Coming back (Good!)
+        case 'transfer': return 'purple';      // Moving around
+        case 'audit': return 'error';          // Correction/Lost item
+        default: return 'grey';
+    }
+}
+
+// Optional: Helper for Icons (Bonus visual cue)
+function getLogIcon(type: string) {
+    switch (type) {
+        case 'purchase': return 'mdi-cash-minus';
+        case 'sale': return 'mdi-cash-plus';
+        case 'rental_out': return 'mdi-truck-delivery';
+        case 'return': return 'mdi-keyboard-return';
+        case 'transfer': return 'mdi-swap-horizontal';
+        case 'audit': return 'mdi-clipboard-check';
+        default: return 'mdi-circle-small';
+    }
+}
 </script>
 
 <template>
@@ -120,8 +147,8 @@ function getDeltaColor(delta: number) {
                         </td>
 
                         <td>
-                            <v-chip size="small" label
-                                :color="log.type === 'return' ? 'success' : log.type === 'sale' ? 'blue' : 'grey'">
+                            <v-chip size="x-small" label variant="tonal" class="font-weight-bold text-uppercase"
+                                :color="getLogColor(log.type)" :prepend-icon="getLogIcon(log.type)">
                                 {{ localeStatus[log.type] || log.type }}
                             </v-chip>
                         </td>

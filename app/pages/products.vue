@@ -78,7 +78,7 @@ async function handleSubmit() {
     try {
         // Validate Unit
         if (!form.value.unitId) {
-            showToast('Please select a unit', 'error');
+            showToast('Prašome pasirinkti vienetą', 'error');
             return;
         }
 
@@ -98,10 +98,10 @@ async function handleSubmit() {
 
         if (editingId.value) {
             await updateProduct({ id: editingId.value, ...payload });
-            showToast('Product updated', 'success');
+            showToast('Produktas atnaujintas', 'success');
         } else {
             await createProduct(payload);
-            showToast('Product created', 'success');
+            showToast('Produktas sukurtas', 'success');
         }
         dialog.value = false;
     } catch (err: any) {
@@ -113,24 +113,24 @@ async function handleArchive() {
     if (!itemToDelete.value) return;
     try {
         await archiveProduct({ id: itemToDelete.value });
-        showToast('Product archived', 'success');
+        showToast('Produktas archyvuotas', 'success');
         deleteDialog.value = false;
     } catch (err: any) {
-        showToast('Failed to archive', 'error');
+        showToast('Nepavyko archyvuoti', 'error');
     }
 }
 
 // -- TABLE CONFIG --
 const headers = [
-    { title: 'Product', key: 'label' },
-    { title: 'Code', key: 'code' },
-    { title: 'Type', key: 'type' },
-    { title: 'Unit', key: 'unitData.label' },
-    { title: 'Price', key: 'price' },
-    { title: 'Daily Rental Price', key: 'daily_rental_price' },
-    { title: 'Weight (kg)', key: 'weight_g', align: 'end' as const },
+    { title: 'Kodas', key: 'code' },
+    { title: 'Produktas', key: 'label' },
+    { title: 'Tipas', key: 'type' },
+    { title: 'Vienetas', key: 'unitData.label' },
+    { title: 'Kaina', key: 'price' },
+    { title: 'Dienos nuomos kaina', key: 'daily_rental_price' },
+    { title: 'Svoris (kg)', key: 'weight_g', align: 'end' as const },
     {
-        title: 'Actions',
+        title: 'Veiksmai',
         key: 'actions',
         sortable: false,
         align: 'end' as const  // <--- ADD THIS
@@ -142,15 +142,15 @@ const headers = [
     <div>
         <div class="d-flex align-center justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Products</h1>
-                <div class="text-subtitle-1 text-medium-emphasis">Manage catalog and prices</div>
+                <h1 class="text-h4 font-weight-bold">Produktai</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">Valdyti katalogą ir kainas</div>
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">
-                Add Product
+                Pridėti produktą
             </v-btn>
         </div>
 
-        <v-switch v-model="showArchived" label="Show Archived Products" color="primary" hide-details
+        <v-switch v-model="showArchived" label="Rodyti archyvuotus produktus" color="primary" hide-details
             class="mb-4"></v-switch>
 
         <v-card border flat>
@@ -166,7 +166,7 @@ const headers = [
                 <template v-slot:item.type="{ item }">
                     <v-chip size="small" :color="item.type === 'service' ? 'purple' : 'blue'" variant="tonal"
                         class="text-uppercase">
-                        {{ item.type }}
+                        {{ item.type === 'service' ? 'Paslauga' : 'Produktas' }}
                     </v-chip>
                 </template>
 
@@ -195,35 +195,37 @@ const headers = [
                         <v-row dense class="mt-2">
 
                             <v-col cols="8">
-                                <v-text-field v-model="form.label" label="Product Name" variant="outlined"
+                                <v-text-field v-model="form.label" label="Pavadinimas" variant="outlined"
                                     density="compact" autofocus></v-text-field>
                             </v-col>
                             <v-col cols="4">
-                                <v-text-field v-model="form.code" label="SKU / Code" variant="outlined"
+                                <v-text-field v-model="form.code" label="Kodas" variant="outlined"
                                     density="compact"></v-text-field>
                             </v-col>
 
                             <v-col cols="6">
-                                <v-select v-model="form.type" :items="['product', 'service']" label="Type"
-                                    variant="outlined" density="compact"></v-select>
+                                <v-select v-model="form.type" :items="['product', 'service']" label="Tipas"
+                                    variant="outlined" density="compact">
+                                </v-select>
                             </v-col>
                             <v-col cols="6">
                                 <v-autocomplete v-model="form.unitId" :items="units || []" item-title="label"
-                                    item-value="_id" label="Unit" variant="outlined" density="compact"
-                                    placeholder="Select Unit"></v-autocomplete>
+                                    item-value="_id" label="Vienetas" variant="outlined" density="compact"
+                                    placeholder="Pasirinkite vienetą"></v-autocomplete>
                             </v-col>
 
                             <v-col cols="6">
-                                <v-text-field v-model.number="form.priceDisplay" label="Price ($)" type="number"
-                                    step="0.01" prefix="$" variant="outlined" density="compact"></v-text-field>
+                                <v-text-field v-model.number="form.priceDisplay" label="Kaina (€)" type="number"
+                                    step="0.01" prefix="€" variant="outlined" density="compact"></v-text-field>
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model.number="form.dailyPriceDisplay" label="Daily Rental Price ($)" type="number"
-                                    step="0.01" prefix="$" variant="outlined" density="compact"></v-text-field>
+                                <v-text-field v-model.number="form.dailyPriceDisplay" label="Dienos nuomos kaina (€)"
+                                    type="number" step="0.01" prefix="€" variant="outlined"
+                                    density="compact"></v-text-field>
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model.number="form.weightDisplay" label="Weight (kg)" type="number"
-                                    variant="outlined" density="compact" hint="Optional"></v-text-field>
+                                <v-text-field v-model.number="form.weightDisplay" label="Svoris (kg)" type="number"
+                                    variant="outlined" density="compact" hint="Pasirinkite, jei taikoma"></v-text-field>
                             </v-col>
 
                         </v-row>
@@ -231,9 +233,9 @@ const headers = [
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+                    <v-btn variant="text" @click="dialog = false">Atšaukti</v-btn>
                     <v-btn color="primary" variant="flat" :loading="isCreating || isUpdating" @click="handleSubmit">
-                        Save Product
+                        Išsaugoti
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -241,15 +243,15 @@ const headers = [
 
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
-                <v-card-title>Archive Product?</v-card-title>
+                <v-card-title>Archyvuoti produktą?</v-card-title>
                 <v-card-text>
-                    Are you sure? This will hide the product from the main list.
-                    You can restore it later if needed.
+                    Ar tikrai? Tai paslėps produktą iš pagrindinio sąrašo.
+                    Jį galėsite atkurti vėliau, jei reikės.
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archive</v-btn>
+                    <v-btn variant="text" @click="deleteDialog = false">Atšaukti</v-btn>
+                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archyvuoti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
