@@ -10,6 +10,8 @@
 
 import type * as customers from "../customers.js";
 import type * as dashboard from "../dashboard.js";
+import type * as documents from "../documents.js";
+import type * as files from "../files.js";
 import type * as invoices from "../invoices.js";
 import type * as orders from "../orders.js";
 import type * as payments from "../payments.js";
@@ -38,6 +40,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   customers: typeof customers;
   dashboard: typeof dashboard;
+  documents: typeof documents;
+  files: typeof files;
   invoices: typeof invoices;
   orders: typeof orders;
   payments: typeof payments;

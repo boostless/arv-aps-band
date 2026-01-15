@@ -13,6 +13,68 @@ async function getNextInvoiceNumber(ctx: any) {
     return num;
 }
 
+export async function calculateInvoicePeriodCosts(
+    ctx: any,
+    orderId: Id<"orders">,
+    startDate: number,
+    endDate: number
+) {
+    const order = await ctx.db.get(orderId);
+    if (!order) throw new Error("Order not found");
+
+    const items = await ctx.db
+        .query("order_items")
+        .withIndex("by_order", q => q.eq("order_id", orderId))
+        .collect();
+
+    const oneDayMs = 1000 * 60 * 60 * 24;
+    const start = new Date(startDate).setHours(0, 0, 0, 0);
+    const end = new Date(endDate).setHours(0, 0, 0, 0);
+
+    const lineItems = [];
+
+    for (const item of items) {
+        let lineTotal = 0;
+
+        // A. Fixed Items (Services/Sales)
+        // Check if the service falls within this invoice period (usually strictly once per order)
+        // Logic: If invoice start date covers the order start date, we bill services.
+        if (item.product_type !== 'product' || order.type === 'sale') {
+            if (start <= order.start_date && end >= order.start_date) {
+                lineTotal = item.quantity * item.price * (1 - (item.discount / 100));
+            }
+        }
+        // B. Rental Items
+        else {
+            let activeDays = 0;
+            for (let d = start; d <= end; d += oneDayMs) {
+                const returnsBeforeToday = (item.return_history || [])
+                    .filter(ret => ret.date < d)
+                    .reduce((sum, ret) => sum + ret.qty, 0);
+
+                const activeQty = Math.max(0, item.quantity - returnsBeforeToday);
+                if (activeQty > 0) activeDays += activeQty; // Accumulate "Item-Days"
+            }
+
+            // Cost = Total Active Item-Days * Daily Price
+            const dailyPrice = item.price * (1 - (item.discount / 100));
+            lineTotal = activeDays * dailyPrice;
+        }
+
+        if (lineTotal > 0) {
+            lineItems.push({
+                label: item.label,
+                type: item.product_type, // 'product' or 'service'
+                amount: lineTotal
+            });
+        }
+    }
+
+    const totalExclTax = lineItems.reduce((sum, i) => sum + i.amount, 0);
+
+    return { lineItems, totalExclTax };
+}
+
 // ✅ UPDATED: createdBy is now a required string, no default value
 export async function generateInvoiceInternal(
     ctx: any,

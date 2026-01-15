@@ -25,4 +25,6 @@ export const invoiceFields = {
 
     // ✅ CHANGED: Now Required
     created_by: v.string(),
+    pdf_url: v.optional(v.string()), // ✅ New field
+    pdf_status: v.optional(v.string()),
 };

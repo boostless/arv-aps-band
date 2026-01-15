@@ -30,4 +30,7 @@ export const settingsFields = {
         name: v.string(),
         role: v.optional(v.string()) // e.g. "Manager", "Driver"
     }))),
+
+    invoice_template_id: v.optional(v.string()),
+    act_template_id: v.optional(v.string()),
 };

@@ -34,6 +34,11 @@ function printInvoice() {
     window.print();
 }
 
+// Change this to your actual Gotenberg URL (or Env variable)
+const GOTENBERG_URL = "https://gotenberg-cwogc8ggs84gsogsw4440c4g.fuksus.lt";
+// Change this to your real Storage ID for the .docx file
+const INVOICE_TEMPLATE_ID = "kg25k77d1xys2hhfe6nwccp6a17z90cg";
+
 async function handleVoid() {
     if (!confirm('Are you sure you want to VOID this invoice? This cannot be undone.')) return;
 
@@ -49,6 +54,35 @@ const isOverdue = computed(() => {
     if (!invoice.value || isPaid.value) return false;
     return Date.now() > (invoice.value.due_date || 0);
 });
+
+const { mutate: requestPdf, isPending: isRequesting } = useConvexMutation(api.documents.requestInvoicePdf);
+
+async function handleDownloadPdf() {
+    // A. If the URL already exists in the database, just open it
+    if (invoice.value?.pdf_url) {
+        window.open(invoice.value.pdf_url, '_blank');
+        return;
+    }
+
+    // B. If it is already generating, don't spam the button
+    if (invoice.value?.pdf_status === 'generating') {
+        showToast("PDF is already being generated...", "info");
+        return;
+    }
+
+    // C. Otherwise, trigger the background job
+    try {
+        await requestPdf({
+            invoiceId: invoiceId,
+            gotenbergUrl: GOTENBERG_URL
+        });
+
+        // We don't get the URL back yet. We just tell the user it started.
+        showToast("PDF generation started...", "success");
+    } catch (err: any) {
+        showToast("Failed to start generation: " + err.message, 'error');
+    }
+}
 </script>
 
 <template>
@@ -68,8 +102,10 @@ const isOverdue = computed(() => {
             </div>
 
             <div>
-                <v-btn variant="outlined" class="mr-2" @click="printInvoice">
-                    <v-icon start>mdi-printer</v-icon> Print
+                <v-btn variant="outlined" color="primary" class="mr-2" :loading="isRequesting"
+                    @click="handleDownloadPdf">
+                    <v-icon start>mdi-file-pdf-box</v-icon>
+                    PDF
                 </v-btn>
 
                 <v-btn v-if="!isPaid && invoice.status !== 'void'" color="success" class="mr-2" prepend-icon="mdi-cash"
