@@ -1,48 +1,54 @@
 <script setup lang="ts">
 import { api } from '~~/convex/_generated/api';
-import { localeStatus } from '~~/shared/utils/localeStatus';
+import { localeStatus } from '~~/shared/utils/localeStatus'; // Assuming this maps stock types
 
 const { data: dashboard, isPending } = useConvexQuery(api.dashboard.getStats, {});
 
 // -- UTILS --
 function formatDate(timestamp: number) {
     return new Date(timestamp).toLocaleString('lt-LT', {
-        month: 'short', day: 'numeric' // Short date
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 }
-
 function formatMoney(cents: number) {
     return (cents / 100).toFixed(2);
 }
 
-function getDeltaColor(delta: number) {
-    if (delta > 0) return 'text-success';
-    if (delta < 0) return 'text-error';
-    return 'text-grey';
+// 1. HELPERS FOR UNIFIED LOGS
+function getActivityIcon(item: any) {
+    if (item.category === 'stock') {
+        switch (item.type) {
+            case 'sale': return 'mdi-logout';
+            case 'return': return 'mdi-login';
+            case 'audit': return 'mdi-clipboard-check';
+            default: return 'mdi-package-variant';
+        }
+    }
+    // Finance
+    if (item.type === 'invoice_created') return 'mdi-file-document-outline';
+    if (item.type === 'payment_received') return 'mdi-cash-multiple';
+    return 'mdi-circle-small';
 }
 
-function getLogColor(type: string) {
-    switch (type) {
-        case 'purchase': return 'teal';
-        case 'sale': return 'blue-darken-2';
-        case 'rental_out': return 'orange-darken-2';
-        case 'return': return 'success';
-        case 'transfer': return 'purple';
-        case 'audit': return 'error';
-        default: return 'grey';
+function getActivityColor(item: any) {
+    if (item.category === 'stock') {
+        if (item.value_text.startsWith('+')) return 'success';
+        if (item.value_text.startsWith('-')) return 'orange-darken-2';
+        return 'grey';
     }
+    // Finance
+    if (item.type === 'invoice_created') return 'primary';
+    if (item.type === 'payment_received') return 'green-darken-1';
+    return 'grey';
 }
 
-function getLogIcon(type: string) {
-    switch (type) {
-        case 'purchase': return 'mdi-cash-minus';
-        case 'sale': return 'mdi-cash-plus';
-        case 'rental_out': return 'mdi-truck-delivery';
-        case 'return': return 'mdi-keyboard-return';
-        case 'transfer': return 'mdi-swap-horizontal';
-        case 'audit': return 'mdi-clipboard-check';
-        default: return 'mdi-information-outline';
-    }
+function getActivityLabel(type: string) {
+    // Custom labels for finance, fallback to localeStatus for stock
+    const map: Record<string, string> = {
+        'invoice_created': 'Sąskaita',
+        'payment_received': 'Mokėjimas',
+    };
+    return map[type] || (localeStatus as Record<string, string>)[type] || type;
 }
 </script>
 
@@ -158,7 +164,8 @@ function getLogIcon(type: string) {
                 <template v-slot:prepend>
                     <v-icon color="blue-grey" class="mr-2">mdi-history</v-icon>
                 </template>
-                <v-card-title>Sandėlio istorija</v-card-title>
+                <v-card-title>Veiklos istorija</v-card-title>
+                <v-card-subtitle>Paskutiniai sandėlio ir finansų įvykiai</v-card-subtitle>
             </v-card-item>
 
             <v-divider></v-divider>
@@ -167,31 +174,41 @@ function getLogIcon(type: string) {
                 <thead>
                     <tr>
                         <th>Laikas</th>
-                        <th>Tipas</th>
-                        <th>Produktas</th>
-                        <th>Sandėlis</th>
-                        <th class="text-end">Kiekis</th>
-                        <th>Pastabos</th>
+                        <th>Įvykis</th>
+                        <th>Aprašymas</th>
+                        <th>Detalės</th>
+                        <th class="text-end">Reikšmė</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="log in dashboard?.recentLogs" :key="log._id">
-                        <td class="text-caption text-medium-emphasis" style="width: 140px">
-                            {{ formatDate(log._creationTime) }}
+                        <td class="text-caption text-medium-emphasis" style="width: 130px">
+                            {{ formatDate(log.time) }}
                         </td>
+
                         <td>
                             <v-chip size="x-small" label variant="tonal" class="font-weight-bold text-uppercase"
-                                :color="getLogColor(log.type)" :prepend-icon="getLogIcon(log.type)">
-                                {{ localeStatus[log.type] || log.type }}
+                                :color="getActivityColor(log)" :prepend-icon="getActivityIcon(log)">
+                                {{ getActivityLabel(log.type) }}
                             </v-chip>
                         </td>
-                        <td class="font-weight-medium">{{ log.productName }}</td>
-                        <td class="text-caption">{{ log.warehouseCode }}</td>
-                        <td class="text-end font-weight-bold" :class="getDeltaColor(log.delta)">
-                            {{ log.delta > 0 ? '+' : '' }}{{ log.delta }}
+
+                        <td class="font-weight-medium">
+                            {{ log.primary_text }}
                         </td>
-                        <td class="text-caption text-grey text-truncate" style="max-width: 200px;">
-                            {{ log.reference_id || log.notes }}
+
+                        <td class="text-caption text-grey">
+                            {{ log.secondary_text }}
+                            <span v-if="log.ref_id && log.category === 'stock'" class="ml-1 text-disabled">
+                                ({{ log.ref_id }})
+                            </span>
+                            <span v-if="log.ref_id && log.category === 'finance'" class="ml-1 text-disabled">
+                                by {{ log.ref_id }}
+                            </span>
+                        </td>
+
+                        <td class="text-end font-weight-bold" :class="getActivityColor(log)">
+                            {{ log.value_text }}
                         </td>
                     </tr>
                 </tbody>

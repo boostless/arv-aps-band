@@ -13,8 +13,13 @@ const { data: contract, isPending } = useConvexQuery(api.orders.get, { id: order
 const { mutate: completeOrder, isPending: isCompleting } = useConvexMutation(api.orders.complete);
 const { mutate: returnPartial, isPending: isReturning } = useConvexMutation(api.orders.returnPartial);
 const { mutate: createInvoice, isPending: isGenerating } = useConvexMutation(api.invoices.create);
+const { data: settings } = useConvexQuery(api.settings.get, {});
 
-
+// Compute the list for the Combobox
+const employeeOptions = computed(() => {
+    if (!settings.value || !settings.value.employees) return ['Admin'];
+    return settings.value.employees.map(e => e.name);
+});
 
 // -- DIALOG STATES --
 const returnDialog = ref(false);
@@ -337,8 +342,9 @@ const invoiceHeaders = [
                     variant="outlined"></v-text-field>
                 <v-text-field v-model="genInvoiceForm.end_date" type="date" label="Billing End"
                     variant="outlined"></v-text-field>
-                <v-combobox v-model="genInvoiceForm.created_by" :items="employeeList" label="Created By"
-                    variant="outlined" placeholder="Select or type name..."></v-combobox>
+                <v-combobox v-model="genInvoiceForm.created_by" :items="employeeOptions" label="Created By"
+                    variant="outlined" placeholder="Select or type name..."
+                    :rules="[v => !!v || 'Required']"></v-combobox>
                 <div class="text-caption text-grey">
                     Apskaičiuoja dienos kainą visiems aktyviems elementams šiame periode.
                 </div>

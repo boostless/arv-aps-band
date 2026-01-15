@@ -24,4 +24,10 @@ export const settingsFields = {
         })
     ),
     invoice_due_days: v.optional(v.number()),
+
+    // ✅ NEW: Employee List
+    employees: v.optional(v.array(v.object({
+        name: v.string(),
+        role: v.optional(v.string()) // e.g. "Manager", "Driver"
+    }))),
 };
