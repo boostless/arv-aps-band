@@ -81,7 +81,7 @@ async function handleFileUpload(file: File, type: 'invoice' | 'act') {
             body: file,
         });
 
-        if (!result.ok) throw new Error("Upload failed");
+        if (!result.ok) throw new Error("Įvyko klaida įkeliant failą.");
 
         const { storageId } = await result.json();
 
@@ -89,10 +89,10 @@ async function handleFileUpload(file: File, type: 'invoice' | 'act') {
         if (type === 'invoice') form.value.invoice_template_id = storageId;
         if (type === 'act') form.value.act_template_id = storageId;
 
-        showToast("Template uploaded! Click Save to apply.", "success");
+        showToast("Šablonas įkeltas! Spauskite Išsaugoti, kad pritaikytumėte.", "success");
 
     } catch (err: any) {
-        showToast("Upload Error: " + err.message, "error");
+        showToast("Įkėlimo klaida: " + err.message, "error");
     } finally {
         isUploading.value = false;
     }
@@ -134,7 +134,7 @@ async function handleSave() {
                     }))
                 : undefined
         });
-        showToast('Settings saved', 'success');
+        showToast('Nustatymai išsaugoti', 'success');
     } catch (err: any) {
         console.error('Save settings error:', err);
         showToast(err.toString().replace('Error: ', ''), 'error');
@@ -168,33 +168,32 @@ function removeEmployee(index: number) {
                         <v-card-text>
                             <v-row dense>
                                 <v-col cols="12">
-                                    <v-text-field v-model="form.business_name" label="Business Name" variant="outlined"
+                                    <v-text-field v-model="form.business_name" label="Įmonės pavadinimas" variant="outlined"
                                         density="comfortable"></v-text-field>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-text-field v-model="form.company_code" label="Company Code (Įmonės kodas)"
-                                        variant="outlined" density="comfortable"></v-text-field>
+                                    <v-text-field v-model="form.company_code" label="Įmonės kodas" variant="outlined" density="comfortable"></v-text-field>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-text-field v-model="form.vat_code" label="VAT Code (PVM kodas)"
+                                    <v-text-field v-model="form.vat_code" label="PVM kodas"
                                         placeholder="Optional" variant="outlined" density="comfortable"></v-text-field>
                                 </v-col>
                                 <v-col cols="12">
-                                    <v-textarea v-model="form.address" label="Address" rows="2" variant="outlined"
+                                    <v-textarea v-model="form.address" label="Adresas" rows="2" variant="outlined"
                                         density="comfortable"></v-textarea>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-text-field v-model="form.email" label="Business Email"
+                                    <v-text-field v-model="form.email" label="El. paštas"
                                         prepend-inner-icon="mdi-email-outline" variant="outlined"
                                         density="comfortable"></v-text-field>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-text-field v-model="form.phone" label="Business Phone"
+                                    <v-text-field v-model="form.phone" label="Telefono numeris"
                                         prepend-inner-icon="mdi-phone-outline" variant="outlined"
                                         density="comfortable"></v-text-field>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-text-field v-model="form.fax_number" label="Fax Number"
+                                    <v-text-field v-model="form.fax_number" label="Fakso numeris"
                                         prepend-inner-icon="mdi-fax" variant="outlined"
                                         density="comfortable"></v-text-field>
                                 </v-col>
@@ -204,9 +203,9 @@ function removeEmployee(index: number) {
 
                     <v-card border flat class="mb-4">
                         <div class="d-flex justify-space-between align-center px-4 pt-4">
-                            <div class="text-h6">Bank Accounts</div>
+                            <div class="text-h6">Banko sąskaitos</div>
                             <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-plus" @click="addBank">
-                                Add Bank
+                                Pridėti banką
                             </v-btn>
                         </div>
                         <v-card-text>
@@ -214,11 +213,11 @@ function removeEmployee(index: number) {
                                 class="d-flex align-start mb-4 bg-grey-lighten-5 pa-3 rounded">
                                 <v-row dense>
                                     <v-col cols="4">
-                                        <v-text-field v-model="bank.name" label="Bank Name" density="compact"
+                                        <v-text-field v-model="bank.name" label="Banko pavadinimas" density="compact"
                                             variant="outlined" hide-details></v-text-field>
                                     </v-col>
                                     <v-col cols="5">
-                                        <v-text-field v-model="bank.iban" label="IBAN" density="compact"
+                                        <v-text-field v-model="bank.iban" label="Sąskaitos numeris" density="compact"
                                             variant="outlined" hide-details></v-text-field>
                                     </v-col>
                                     <v-col cols="3">
@@ -237,23 +236,22 @@ function removeEmployee(index: number) {
 
                     <v-card border flat class="mb-4">
                         <div class="d-flex justify-space-between align-center px-4 pt-4">
-                            <div class="text-h6">Employees</div>
+                            <div class="text-h6">Darbuotojai</div>
                             <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-plus"
                                 @click="addEmployee">
-                                Add Employee
+                                Pridėti darbuotoją
                             </v-btn>
                         </div>
-                        <v-card-subtitle class="px-4">Manage names available for "Created By" on
-                            invoices</v-card-subtitle>
+                        <v-card-subtitle class="px-4">Valdykite vardus, kurie bus prieinami "Sukūrė" laukelyje sąskaitose faktūrose</v-card-subtitle>
                         <v-card-text>
                             <div v-for="(emp, i) in form.employees" :key="i" class="d-flex align-center mb-2">
                                 <v-row dense>
                                     <v-col cols="7">
-                                        <v-text-field v-model="emp.name" label="Name" placeholder="John Doe"
+                                        <v-text-field v-model="emp.name" label="Vardas" placeholder="Jonas Jonaitis"
                                             density="compact" variant="outlined" hide-details></v-text-field>
                                     </v-col>
                                     <v-col cols="5">
-                                        <v-text-field v-model="emp.role" label="Role (Optional)" placeholder="Manager"
+                                        <v-text-field v-model="emp.role" label="Rolė (neprivaloma)" placeholder="Vadovas"
                                             density="compact" variant="outlined" hide-details></v-text-field>
                                     </v-col>
                                 </v-row>
@@ -261,7 +259,7 @@ function removeEmployee(index: number) {
                                     @click="removeEmployee(i)"></v-btn>
                             </div>
                             <div v-if="form.employees.length === 0" class="text-caption text-grey text-center py-2">
-                                No employees added yet.
+                                Darbuotojų dar nėra.
                             </div>
                         </v-card-text>
                     </v-card>
@@ -271,16 +269,16 @@ function removeEmployee(index: number) {
                             <template v-slot:prepend>
                                 <v-icon color="primary">mdi-file-document-edit-outline</v-icon>
                             </template>
-                            <v-card-title>Document Templates</v-card-title>
-                            <v-card-subtitle>Upload .docx templates for PDF generation</v-card-subtitle>
+                            <v-card-title>Dokumentų šablonai</v-card-title>
+                            <v-card-subtitle>Įkelkite .html šablonus PDF generavimui</v-card-subtitle>
                         </v-card-item>
                         <v-divider></v-divider>
 
                         <v-card-text>
                             <v-row>
                                 <v-col cols="12" md="6">
-                                    <div class="text-subtitle-2 mb-2">Invoice Template</div>
-                                    <v-file-input label="Select HTML file" accept=".html" variant="outlined"
+                                    <div class="text-subtitle-2 mb-2">Sąskaitos faktūros šablonas</div>
+                                    <v-file-input label="Pasirinkite HTML failą" accept=".html" variant="outlined"
                                         density="compact" prepend-icon="" prepend-inner-icon="mdi-file-code"
                                         :loading="isUploading"
                                         @update:model-value="(files) => { if (files) { const file = Array.isArray(files) ? files[0] : files; if (file) handleFileUpload(file, 'invoice'); } }"></v-file-input>
@@ -288,19 +286,19 @@ function removeEmployee(index: number) {
                                     <div v-if="form.invoice_template_id"
                                         class="d-flex align-center text-caption text-success mt-n2">
                                         <v-icon size="small" start>mdi-check-circle</v-icon>
-                                        Template Active
+                                        Šablonas aktyvus
                                         <div class="text-grey ml-2 text-truncate" style="max-width: 150px">
                                             ({{ form.invoice_template_id }})
                                         </div>
                                     </div>
                                     <div v-else class="text-caption text-warning mt-n2">
-                                        No template uploaded.
+                                        Šablonas neįkeltas.
                                     </div>
                                 </v-col>
 
                                 <v-col cols="12" md="6">
-                                    <div class="text-subtitle-2 mb-2">Handover Act Template</div>
-                                    <v-file-input label="Select HTML file" accept=".html" variant="outlined"
+                                    <div class="text-subtitle-2 mb-2">Priėmimo-išdavimo aktas šablonas</div>
+                                    <v-file-input label="Pasirinkite HTML failą" accept=".html" variant="outlined"
                                         density="compact" prepend-icon="" prepend-inner-icon="mdi-file-code"
                                         :loading="isUploading"
                                         @update:model-value="(files) => { if (files) { const file = Array.isArray(files) ? files[0] : files; if (file) handleFileUpload(file, 'act'); } }"></v-file-input>
@@ -308,10 +306,13 @@ function removeEmployee(index: number) {
                                     <div v-if="form.act_template_id"
                                         class="d-flex align-center text-caption text-success mt-n2">
                                         <v-icon size="small" start>mdi-check-circle</v-icon>
-                                        Template Active
+                                        Šablonas aktyvus
+                                        <div class="text-grey ml-2 text-truncate" style="max-width: 150px">
+                                            ({{ form.act_template_id }})
+                                        </div>
                                     </div>
                                     <div v-else class="text-caption text-warning mt-n2">
-                                        No template uploaded.
+                                        Šablonas neįkeltas.
                                     </div>
                                 </v-col>
                             </v-row>
@@ -320,18 +321,17 @@ function removeEmployee(index: number) {
                 </v-col>
 
                 <v-col cols="12" md="4">
-                    <v-card title="Invoicing Defaults" border flat>
+                    <v-card title="Sąskaitų faktūrų numatytosios reikšmės" border flat>
                         <v-card-text>
-                            <v-text-field v-model.number="form.invoice_start_number" label="Next Invoice Number"
+                            <v-text-field v-model.number="form.invoice_start_number" label="Kitas sąskaitos faktūros numeris"
                                 type="number" variant="outlined" density="comfortable"
-                                hint="Auto-increments on generation" persistent-hint class="mb-4"></v-text-field>
-
-                            <v-text-field v-model.number="form.tax_rate" label="Default VAT Rate (%)" type="number"
+                                hint="Automatiškai didėja generavimo metu" persistent-hint class="mb-4"></v-text-field>
+                            <v-text-field v-model.number="form.tax_rate" label="Numatytoji PVM norma (%)" type="number"
                                 variant="outlined" density="comfortable" suffix="%" class="mb-4"></v-text-field>
 
-                            <v-text-field v-model.number="form.invoice_due_days" label="Payment Terms (Days)"
-                                type="number" variant="outlined" density="comfortable" suffix="days"
-                                hint="Default due date for new invoices" persistent-hint></v-text-field>
+                            <v-text-field v-model.number="form.invoice_due_days" label="Mokėjimo terminai (dienomis)"
+                                type="number" variant="outlined" density="comfortable" suffix="dienos"
+                                hint="Numatytas mokėjimo terminas naujoms sąskaitoms faktūroms" persistent-hint></v-text-field>
                         </v-card-text>
 
                         <v-divider></v-divider>
@@ -339,7 +339,7 @@ function removeEmployee(index: number) {
                         <v-card-actions class="pa-4">
                             <v-btn block color="primary" size="large" variant="flat" :loading="isSaving"
                                 @click="handleSave">
-                                Save Changes
+                                Išsaugoti pakeitimus
                             </v-btn>
                         </v-card-actions>
                     </v-card>
