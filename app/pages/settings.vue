@@ -280,8 +280,8 @@ function removeEmployee(index: number) {
                             <v-row>
                                 <v-col cols="12" md="6">
                                     <div class="text-subtitle-2 mb-2">Invoice Template</div>
-                                    <v-file-input label="Select .docx file" accept=".docx" variant="outlined"
-                                        density="compact" prepend-icon="" prepend-inner-icon="mdi-paperclip"
+                                    <v-file-input label="Select HTML file" accept=".html" variant="outlined"
+                                        density="compact" prepend-icon="" prepend-inner-icon="mdi-file-code"
                                         :loading="isUploading"
                                         @update:model-value="(files) => { if (files) { const file = Array.isArray(files) ? files[0] : files; if (file) handleFileUpload(file, 'invoice'); } }"></v-file-input>
 
@@ -300,8 +300,8 @@ function removeEmployee(index: number) {
 
                                 <v-col cols="12" md="6">
                                     <div class="text-subtitle-2 mb-2">Handover Act Template</div>
-                                    <v-file-input label="Select .docx file" accept=".docx" variant="outlined"
-                                        density="compact" prepend-icon="" prepend-inner-icon="mdi-paperclip"
+                                    <v-file-input label="Select HTML file" accept=".html" variant="outlined"
+                                        density="compact" prepend-icon="" prepend-inner-icon="mdi-file-code"
                                         :loading="isUploading"
                                         @update:model-value="(files) => { if (files) { const file = Array.isArray(files) ? files[0] : files; if (file) handleFileUpload(file, 'act'); } }"></v-file-input>
 

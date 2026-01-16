@@ -2,8 +2,7 @@
 import { action, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import PizZip from "pizzip";
-import Docxtemplater from "docxtemplater";
+import Handlebars from "handlebars";
 import { calculateInvoicePeriodCosts } from "./invoices";
 
 // ----------------------------------------------------------------------
@@ -183,10 +182,11 @@ export const generatePdfAction = action({
             if (!templateUrl) throw new Error("Template file URL is invalid");
 
             const templateRes = await fetch(templateUrl);
-            const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
+            const templateHtml = await templateRes.text();
+            const filledHtml = fillHtmlTemplate(templateHtml, templateData);
 
             // J. Convert to PDF
-            const pdfBuffer = await convertToPdf(filledDocx, args.gotenbergUrl);
+            const pdfBuffer = await convertHtmlToPdf(filledHtml, args.gotenbergUrl);
 
             // K. Save PDF to Storage
             const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
@@ -301,13 +301,14 @@ export const generateHandoverActAction = action({
                 total_weight: totalWeight.toFixed(2)
             };
 
-            // ... (PDF Generation Logic remains the same) ...
+            // PDF Generation Logic
             const templateUrl = await ctx.storage.getUrl(settings.act_template_id);
             if (!templateUrl) throw new Error("Template URL invalid");
 
             const templateRes = await fetch(templateUrl);
-            const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
-            const pdfBuffer = await convertToPdf(filledDocx, args.gotenbergUrl);
+            const templateHtml = await templateRes.text();
+            const filledHtml = fillHtmlTemplate(templateHtml, templateData);
+            const pdfBuffer = await convertHtmlToPdf(filledHtml, args.gotenbergUrl);
 
             const storageId = await ctx.storage.store(new Blob([pdfBuffer], { type: "application/pdf" }));
             const publicUrl = await ctx.storage.getUrl(storageId);
@@ -450,14 +451,16 @@ async function generateInvoicePdfLogic(ctx: any, invoiceId: any, gotenbergUrl: s
     // 8. Generate & Store
     const templateUrl = await ctx.storage.getUrl(settings.invoice_template_id);
     const templateRes = await fetch(templateUrl);
-    const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
-    const pdfBuffer = await convertToPdf(filledDocx, gotenbergUrl);
+    const templateHtml = await templateRes.text();
+    const filledHtml = fillHtmlTemplate(templateHtml, templateData);
+    const pdfBuffer = await convertHtmlToPdf(filledHtml, gotenbergUrl);
 
     const storageId = await ctx.storage.store(new Blob([pdfBuffer], { type: "application/pdf" }));
     return await ctx.storage.getUrl(storageId);
 }
+
 // ----------------------------------------------------------------------
-// 4. UTILS (Docx & Gotenberg)
+// 4. UTILS (HTML Template & Gotenberg)
 // ----------------------------------------------------------------------
 
 function numberToLithuanianWords(cents: number): string {
@@ -550,46 +553,44 @@ function numberToLithuanianWords(cents: number): string {
     return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
-async function fillTemplate(templateBuffer: ArrayBuffer, data: any) {
-    const zip = new PizZip(templateBuffer);
-    const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-    });
+// Register Handlebars helpers
+Handlebars.registerHelper('formatMoney', function(cents: number) {
+    return (cents / 100).toFixed(2);
+});
 
-    doc.render(data);
+Handlebars.registerHelper('formatDate', function(timestamp: number) {
+    return new Date(timestamp).toLocaleDateString('lt-LT');
+});
 
-    // ✅ FIX: Use "uint8array" for Convex compatibility
-    return doc.getZip().generate({
-        type: "uint8array",
-        compression: "DEFLATE",
-    });
+Handlebars.registerHelper('numberToWords', function(cents: number) {
+    return numberToLithuanianWords(cents);
+});
+
+function fillHtmlTemplate(templateHtml: string, data: any): string {
+    // Compile the template with Handlebars
+    const template = Handlebars.compile(templateHtml);
+    return template(data);
 }
 
-async function convertToPdf(docxBuffer: Uint8Array, gotenbergUrl: string) {
+async function convertHtmlToPdf(html: string, gotenbergUrl: string): Promise<ArrayBuffer> {
     const formData = new FormData();
-    // Convert Uint8Array to proper ArrayBuffer for Blob
-    const arrayBuffer = docxBuffer.buffer.slice(docxBuffer.byteOffset, docxBuffer.byteOffset + docxBuffer.byteLength) as ArrayBuffer;
-    const blob = new Blob([arrayBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-    formData.append("files", blob, "document.docx");
+    const htmlBlob = new Blob([html], { type: 'text/html' });
+    formData.append("files", htmlBlob, "index.html");
 
-    // ✅ NEW: Get credentials from Environment Variables
-    const username = 'UQwijxzMsedVogKz'; // Best practice: Use env vars
+    // Get credentials from Environment Variables
+    const username = 'UQwijxzMsedVogKz';
     const password = 'tm75K0WoXncwfK4NR5Riz7mHqrnhVyMi';
 
-    // Prepare headers
     const headers: Record<string, string> = {};
 
-    // Only add auth if variables exist
     if (username && password) {
-        // Create Basic Auth Header (base64 encoded)
         const credentials = btoa(`${username}:${password}`);
         headers['Authorization'] = `Basic ${credentials}`;
     }
 
-    const response = await fetch(`${gotenbergUrl}/forms/libreoffice/convert`, {
+    const response = await fetch(`${gotenbergUrl}/forms/chromium/convert/html`, {
         method: "POST",
-        headers: headers, // ✅ Pass headers here
+        headers: headers,
         body: formData,
     });
 

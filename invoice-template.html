@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sąskaita Faktūra Nr. {{invoice_number}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+            padding: 40px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #333;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .invoice-title {
+            flex: 1;
+            text-align: right;
+        }
+        
+        .invoice-title h1 {
+            font-size: 28pt;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 5px;
+        }
+        
+        .invoice-title .invoice-number {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .section-title {
+            font-size: 9pt;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .company-name {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .info-text {
+            margin-bottom: 2px;
+        }
+        
+        .customer-section {
+            margin: 20px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            padding: 10px 5px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 10pt;
+        }
+        
+        td {
+            padding: 8px 5px;
+            border: 1px solid #ddd;
+            font-size: 10pt;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .totals-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        
+        .left-info {
+            flex: 1;
+            padding-right: 20px;
+        }
+        
+        .totals-box {
+            width: 300px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .total-row.grand-total {
+            background-color: #f5f5f5;
+            padding: 12px 15px;
+            margin-top: 5px;
+            border: none;
+            font-size: 14pt;
+            font-weight: bold;
+        }
+        
+        .bank-info {
+            margin: 15px 0;
+        }
+        
+        .bank-account {
+            margin-bottom: 10px;
+        }
+        
+        .bank-name {
+            font-weight: bold;
+        }
+        
+        .footer-info {
+            margin-top: 20px;
+            font-size: 10pt;
+        }
+        
+        .signature-line {
+            margin-top: 10px;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="company-info">
+            <div class="section-title">PARDAVĖJAS / SELLER</div>
+            <div class="company-name">{{seller_name}}</div>
+            <div class="info-text">{{seller_address}}</div>
+            <div class="info-text">
+                {{#if seller_phone}}Tel.: {{seller_phone}}{{/if}}
+                {{#if seller_fax}}, Faks: {{seller_fax}}{{/if}}
+            </div>
+            <div class="info-text">Įmonės kodas: {{seller_imones_kodas}}</div>
+            <div class="info-text">PVM kodas: {{seller_pvm_kodas}}</div>
+        </div>
+        
+        <div class="invoice-title">
+            <h1>SĄSKAITA FAKTŪRA</h1>
+            <div class="invoice-number">Nr. {{invoice_number}}</div>
+            <div class="info-text"><strong>Išrašymo data:</strong> {{israsymo_data}}</div>
+            <div class="info-text"><strong>Apmokėti iki:</strong> {{apmoketi_iki}}</div>
+        </div>
+    </div>
+
+    <!-- Customer Info -->
+    <div class="customer-section">
+        <div class="section-title">PIRKĖJAS / BUYER</div>
+        <div class="company-name">{{customer_name}}</div>
+        <div class="info-text">{{customer_address}}</div>
+        {{#if customer_imones_kodas}}
+        <div class="info-text">Įmonės kodas: {{customer_imones_kodas}}</div>
+        {{/if}}
+        {{#if customer_pvm_kodas}}
+        <div class="info-text">PVM kodas: {{customer_pvm_kodas}}</div>
+        {{/if}}
+    </div>
+
+    <!-- Items Table -->
+    <table>
+        <thead>
+            <tr>
+                <th class="text-center" style="width: 40px;">Eil. Nr.</th>
+                <th>Pavadinimas</th>
+                <th class="text-center" style="width: 50px;">Vnt.</th>
+                <th class="text-center" style="width: 70px;">Kiekis</th>
+                <th class="text-right" style="width: 80px;">Kaina</th>
+                <th class="text-right" style="width: 90px;">Suma be PVM</th>
+                <th class="text-right" style="width: 90px;">Suma PVM</th>
+                <th class="text-right" style="width: 100px;">Iš viso</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each items}}
+            <tr>
+                <td class="text-center">{{eil_nr}}</td>
+                <td>{{pavadinimas}}</td>
+                <td class="text-center">{{vnt}}</td>
+                <td class="text-center">{{kiekis}}</td>
+                <td class="text-right">€{{kaina}}</td>
+                <td class="text-right">€{{suma_be_pvm}}</td>
+                <td class="text-right">€{{suma_pvm}}</td>
+                <td class="text-right">€{{is_viso}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+
+    <!-- Totals and Additional Info -->
+    <div class="totals-section">
+        <div class="left-info">
+            <div class="bank-info">
+                <div class="section-title">Banko sąskaitos:</div>
+                {{#if seller_bank_1_name}}
+                <div class="bank-account">
+                    <div class="bank-name">{{seller_bank_1_name}}</div>
+                    <div style="font-size: 9pt;">{{seller_bank_1_iban}}</div>
+                </div>
+                {{/if}}
+                {{#if seller_bank_2_name}}
+                <div class="bank-account">
+                    <div class="bank-name">{{seller_bank_2_name}}</div>
+                    <div style="font-size: 9pt;">{{seller_bank_2_iban}}</div>
+                </div>
+                {{/if}}
+            </div>
+            
+            <div class="footer-info">
+                <div><strong>Sąskaitos periodas:</strong> {{saskaitos_periodas}}</div>
+                {{#if objekto_adresas}}
+                <div style="margin-top: 10px;"><strong>Objekto adresas:</strong> {{objekto_adresas}}</div>
+                {{/if}}
+            </div>
+            
+            <div class="footer-info" style="margin-top: 20px;">
+                <div><strong>Sąskaitą išrašė:</strong> {{created_by}}</div>
+                <div class="signature-line"><strong>Sąskaitą gavo:</strong> _________________</div>
+            </div>
+        </div>
+        
+        <div class="totals-box">
+            <div class="total-row">
+                <span>Suma be PVM:</span>
+                <span>€{{suma_be_pvm}}</span>
+            </div>
+            <div class="total-row">
+                <span>Suma PVM:</span>
+                <span>€{{suma_pvm}}</span>
+            </div>
+            <div class="total-row grand-total">
+                <span>Iš viso:</span>
+                <span>€{{is_viso}}</span>
+            </div>
+            {{#if suma_zodziais}}
+            <div style="margin-top: 15px; font-size: 9pt; color: #666;">
+                <strong>Suma žodžiais:</strong><br>
+                {{suma_zodziais}}
+            </div>
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html>
