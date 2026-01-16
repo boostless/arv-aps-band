@@ -1,7 +1,8 @@
 // convex/payments.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { paymentFields } from "./schemas/payments"; // Check if your folder is 'schema' or 'schemas'
+import { paymentFields } from "./schemas/payments";
+import { createNotification } from "./notifications";
 
 // 1. ADD PAYMENT
 export const add = mutation({
@@ -28,6 +29,16 @@ export const add = mutation({
         if (totalPaid >= invoice.amount) {
             if (invoice.status !== 'paid') {
                 await ctx.db.patch(args.invoice_id, { status: 'paid' });
+                
+                // Create notification
+                await createNotification(
+                    ctx,
+                    'invoice_paid',
+                    `Sąskaita #${invoice.invoice_number} apmokėta`,
+                    `Suma: €${(invoice.amount / 100).toFixed(2)}`,
+                    invoice.order_id,
+                    args.invoice_id
+                );
             }
         } else {
             // Optional: If you support deleting payments, you might want to revert to 'unpaid' here too.

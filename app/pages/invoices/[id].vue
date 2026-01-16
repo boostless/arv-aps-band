@@ -188,8 +188,8 @@ async function handleDownloadPdf() {
                         </td>
                         <td class="text-center">{{ item.quantity || '-' }}</td>
                         <td class="text-right">{{ item.price ? '€' + formatMoney(item.price) : '-' }}</td>
-                        <td class="text-center">{{ item.discount ? item.discount + '%' : '-' }}</td>
-                        <td class="text-right font-weight-bold">€{{ formatMoney(item.amount) }}</td>
+                        <td class="text-center">-</td>
+                        <td class="text-right font-weight-bold">€{{ formatMoney(item.total) }}</td>
                     </tr>
                     <tr v-else>
                         <td colspan="5" class="py-2">

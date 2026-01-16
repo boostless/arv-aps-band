@@ -2,6 +2,13 @@
 import { ref } from 'vue'
 
 const drawer = ref(true) // Controls sidebar visibility
+const notificationDrawer = ref(false) // Controls notification drawer
+
+// Reference to NotificationDrawer component
+const notificationDrawerRef = ref<{ unreadCount: number } | null>(null)
+
+// Get unread count from the drawer component
+const unreadCount = computed(() => notificationDrawerRef.value?.unreadCount ?? 0)
 
 // Navigation Menu Items
 const items = ref([
@@ -93,8 +100,15 @@ const items = ref([
         <v-app-bar flat border>
             <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
             <v-spacer></v-spacer>
-            <v-btn icon="mdi-bell-outline"></v-btn>
+            <v-btn icon @click="notificationDrawer = !notificationDrawer">
+                <v-badge v-if="unreadCount && unreadCount > 0" :content="unreadCount" color="error">
+                    <v-icon>mdi-bell-outline</v-icon>
+                </v-badge>
+                <v-icon v-else>mdi-bell-outline</v-icon>
+            </v-btn>
         </v-app-bar>
+
+        <NotificationDrawer ref="notificationDrawerRef" v-model="notificationDrawer" />
 
         <v-main class="bg-grey-lighten-4">
             <v-container fluid class="pa-6">

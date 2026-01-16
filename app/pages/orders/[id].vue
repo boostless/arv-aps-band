@@ -24,15 +24,13 @@ const employeeOptions = computed(() => {
 // -- DIALOG STATES --
 const returnDialog = ref(false);
 
-const employeeList = ['Admin', 'Manager', 'Sales Rep'];
-
 // -- FORMS --
 const returnForm = ref<{ itemId: Id<'order_items'>; label: string; max: number; current: number; input: number }[]>([]);
 const genInvoiceDialog = ref(false);
 const genInvoiceForm = ref({
     start_date: '',
     end_date: '',
-    created_by: 'Admin' // Default
+    created_by: employeeOptions.value[0] // Default
 });
 
 // -- UTILS --
@@ -58,7 +56,7 @@ async function handleComplete() {
 function openReturnDialog() {
     if (!contract.value) return;
     returnForm.value = contract.value.items
-        .filter(item => item.product_type === 'product' && (item.quantity - (item.returned_quantity || 0) > 0))
+        .filter(item => item.productTypeKey !== 'service' && (item.quantity - (item.returned_quantity || 0) > 0))
         .map(item => ({
             itemId: item._id,
             label: item.label,
@@ -136,7 +134,7 @@ async function handleGenerateInvoice() {
             start_date: new Date(genInvoiceForm.value.start_date).getTime(),
             end_date: new Date(genInvoiceForm.value.end_date).getTime(),
             // ✅ Pass the employee name
-            created_by: genInvoiceForm.value.created_by
+            created_by: genInvoiceForm.value.created_by || 'Sistema'
         });
         showToast('Invoice generated', 'success');
         genInvoiceDialog.value = false;
@@ -366,7 +364,7 @@ const invoiceHeaders = [
 
     <v-dialog v-model="genInvoiceDialog" max-width="400">
         <v-card>
-            <v-card-title>Generuoti sąskaitą</v-card-title>
+            <v-card-title>Generuoti sąskaitą {{ employeeOptions }}</v-card-title>
             <v-card-text class="pt-4">
                 <v-text-field v-model="genInvoiceForm.start_date" type="date" label="Billing Start"
                     variant="outlined"></v-text-field>

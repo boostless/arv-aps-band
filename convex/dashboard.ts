@@ -17,7 +17,7 @@ export const getStats = query({
                 const customer = await ctx.db.get(o.customer);
                 return {
                     ...o,
-                    customerName: customer?.label || "Unknown"
+                    customerName: customer?.label || "Nežinomas klientas"
                 };
             })
         );
@@ -47,7 +47,7 @@ export const getStats = query({
 
                 return {
                     ...inv,
-                    customerName: customer?.label || "Unknown",
+                    customerName: customer?.label || "Nežinomas klientas",
                     remainingAmount: inv.amount - paid,
                     isOverdue: Date.now() > inv.end_date
                 };
@@ -58,7 +58,7 @@ export const getStats = query({
         const logs = await ctx.db
             .query("stock_logs")
             .order("desc")
-            .take(10);
+            .take(50);
 
         const logsWithDetails = await Promise.all(
             logs.map(async (log) => {
@@ -66,7 +66,7 @@ export const getStats = query({
                 const warehouse = await ctx.db.get(log.warehouse);
                 return {
                     ...log,
-                    productName: product?.label || "Unknown",
+                    productName: product?.label || "Nežinomas produktas",
                     warehouseCode: warehouse?.code || "WH-?",
                 };
             })

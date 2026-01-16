@@ -11,6 +11,7 @@ import { orderFields, orderItemFields } from "./schemas/orders";
 import { paymentFields } from "./schemas/payments";
 import { invoiceFields } from "./schemas/invoices";
 import { productTypeFields } from "./schemas/productTypes";
+import { notificationFields } from "./schemas/notifications";
 
 export default defineSchema({
     products: defineTable(productFields)
@@ -44,4 +45,7 @@ export default defineSchema({
         .index("by_number", ["invoice_number"]),
     product_types: defineTable(productTypeFields)
         .index("by_key", ["key"]),
+    notifications: defineTable(notificationFields)
+        .index("by_created", ["created_at"])
+        .index("by_read", ["read"]),
 });

@@ -1,7 +1,8 @@
 // convex/orders.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { generateInvoiceInternal } from "./invoices"; // ✅ Import logic
+import { generateInvoiceInternal } from "./invoices";
+import { createNotification } from "./notifications";
 
 // 1. HELPER: Get Next Contract Number
 // (We reuse the invoice_start_number or you can add a separate 'contract_start_number' to settings)
@@ -33,18 +34,52 @@ export const create = mutation({
             discount: v.number(),
             label: v.string(),
             code: v.string(),
-            product_type: v.union(v.literal('product'), v.literal('service')),
+            product_type: v.id("product_types"),
         }))
     },
     handler: async (ctx, args) => {
-        // 2. FETCH SETTINGS (For Tax Rate)
+        // 1. FETCH PRODUCT TYPES (To identify services vs rental items)
+        const productTypeIds = [...new Set(args.items.map(item => item.product_type))];
+        const productTypes = await Promise.all(
+            productTypeIds.map(id => ctx.db.get(id))
+        );
+        const typeMap = new Map(productTypes.filter(Boolean).map(t => [t!._id, t!]));
+
+        // 2. VALIDATE STOCK AVAILABILITY (Before creating order)
+        for (const item of args.items) {
+            const productType = typeMap.get(item.product_type);
+            const isService = productType?.key === 'service';
+
+            // Only check stock for rental items
+            if (!isService) {
+                const stockRecord = await ctx.db
+                    .query("stock")
+                    .withIndex("by_product_warehouse", q =>
+                        q.eq("product", item.product).eq("warehouse", item.warehouse)
+                    )
+                    .unique();
+
+                const currentQty = stockRecord ? stockRecord.quantity : 0;
+                const availableQty = currentQty;
+
+                if (availableQty < item.quantity) {
+                    const product = await ctx.db.get(item.product);
+                    const warehouse = await ctx.db.get(item.warehouse);
+                    throw new Error(
+                        `Insufficient stock for "${item.label}". Available: ${availableQty}, Requested: ${item.quantity} at ${warehouse?.name || 'warehouse'}`
+                    );
+                }
+            }
+        }
+
+        // 3. FETCH SETTINGS (For Tax Rate)
         const settings = await ctx.db.query("business_settings").first();
         const taxRate = settings?.tax_rate || 21;
 
-        // 3. GENERATE CONTRACT NUMBER
+        // 4. GENERATE CONTRACT NUMBER
         const contractNum = await getNextContractNumber(ctx);
 
-        // 4. CALCULATE TOTALS
+        // 5. CALCULATE TOTALS
         let subtotal = 0;
         const itemsWithTotals = args.items.map(item => {
             const itemTotal = Math.round(
@@ -57,7 +92,7 @@ export const create = mutation({
         // Calculate Tax
         const taxAmount = Math.round(subtotal * (taxRate / 100));
 
-        // 5. CREATE ORDER (With all required fields)
+        // 6. CREATE ORDER (With all required fields)
         const orderId = await ctx.db.insert("orders", {
             customer: args.customer,
             start_date: args.start_date,
@@ -65,17 +100,15 @@ export const create = mutation({
             status: args.type === 'sale' ? 'completed' : 'active',
             type: args.type,
 
-            contract_number: contractNum, // <--- FIXED: Added this
+            contract_number: contractNum,
             total_amount: subtotal,
-            tax_amount: taxAmount,        // <--- FIXED: Added this
+            tax_amount: taxAmount,
 
             created_by: args.created_by || 'System',
             notes: args.notes,
         });
 
-        // ... (Rest of the function: Insert Items & Stock Logs) ...
-
-        // 6. CREATE ITEMS & DEDUCT STOCK
+        // 7. CREATE ITEMS & DEDUCT STOCK
         for (const item of itemsWithTotals) {
             await ctx.db.insert("order_items", {
                 order_id: orderId,
@@ -83,7 +116,11 @@ export const create = mutation({
                 returned_quantity: 0
             });
 
-            if (item.product_type === 'product') {
+            // Only deduct stock for rental items (not services)
+            const productType = typeMap.get(item.product_type);
+            const isService = productType?.key === 'service';
+
+            if (!isService) {
                 const stockRecord = await ctx.db
                     .query("stock")
                     .withIndex("by_product_warehouse", q =>
@@ -110,11 +147,21 @@ export const create = mutation({
                     delta: -item.quantity,
                     resulting_quantity: newQty,
                     type: args.type === 'sale' ? 'sale' : 'rental_out',
-                    reference_id: `ORD-${contractNum}`, // Use contract # for friendly display
+                    reference_id: `ORD-${contractNum}`,
                     notes: `Order for ${args.created_by || 'Customer'}`
                 });
             }
         }
+
+        // Create notification
+        const customer = await ctx.db.get(args.customer);
+        await createNotification(
+            ctx,
+            'order_created',
+            `Naujas užsakymas #${contractNum}`,
+            `Klientas: ${customer?.label || 'Nežinomas'}`,
+            orderId
+        );
 
         return orderId;
     },
@@ -157,33 +204,46 @@ export const get = query({
             .withIndex("by_order", (q) => q.eq("order_id", args.id))
             .collect();
 
-        // ✅ NEW: Calculate Active Daily Rate
+        // Fetch product types to check if items are rental products
+        const productTypeIds = [...new Set(items.map(item => item.product_type))];
+        const productTypes = await Promise.all(
+            productTypeIds.map(id => ctx.db.get(id))
+        );
+        const typeMap = new Map(productTypes.filter(Boolean).map(t => [t!._id, t!]));
+
+        // Enrich items with product type key for frontend filtering
+        const enrichedItems = items.map(item => ({
+            ...item,
+            productTypeKey: typeMap.get(item.product_type)?.key || 'unknown'
+        }));
+
+        // Calculate Active Daily Rate
         let activeDailyRate = 0;
 
         if (order.type === 'rental') {
             for (const item of items) {
-                // Only products count towards daily rate (not one-off services like Delivery)
-                if (item.product_type === 'product') {
+                const productType = typeMap.get(item.product_type);
+                
+                // Only rental products count (exclude services which are one-time charges)
+                // "service" is the reserved key for non-rental items
+                if (productType?.key !== 'service') {
                     const returned = item.returned_quantity || 0;
                     const activeQty = Math.max(0, item.quantity - returned);
 
-                    // Price calculation: Price * Qty * Discount
+                    // Price calculation: Price * Qty * (1 - Discount%)
                     const lineTotal = item.price * activeQty * (1 - (item.discount / 100));
                     activeDailyRate += lineTotal;
                 }
             }
-        } else {
-            // For sales, the "active rate" is 0 because it's a one-time charge
-            activeDailyRate = 0;
         }
 
         return {
             ...order,
             customer,
-            items,
+            items: enrichedItems,
             settings,
             invoices,
-            activeDailyRate // <--- Return this new value
+            activeDailyRate
         };
     },
 });
@@ -201,8 +261,19 @@ export const complete = mutation({
             .withIndex("by_order", (q) => q.eq("order_id", args.id))
             .collect();
 
+        // Fetch product types to identify rental items
+        const productTypeIds = [...new Set(items.map(item => item.product_type))];
+        const productTypes = await Promise.all(
+            productTypeIds.map(id => ctx.db.get(id))
+        );
+        const typeMap = new Map(productTypes.filter(Boolean).map(t => [t!._id, t!]));
+
         for (const item of items) {
-            if (item.product_type === 'product') {
+            const productType = typeMap.get(item.product_type);
+            const isService = productType?.key === 'service';
+            
+            // Only process returns for rental items (not services)
+            if (!isService) {
                 const alreadyReturned = item.returned_quantity || 0;
                 const remainingToReturn = item.quantity - alreadyReturned;
 
@@ -294,6 +365,16 @@ export const complete = mutation({
             status: 'completed',
             end_date: Date.now()
         });
+
+        // Create notification
+        const customer = await ctx.db.get(order.customer);
+        await createNotification(
+            ctx,
+            'order_completed',
+            `Užsakymas #${order.contract_number} užbaigtas`,
+            `Klientas: ${customer?.label || 'Nežinomas'}`,
+            args.id
+        );
     },
 });
 
@@ -310,13 +391,28 @@ export const returnPartial = mutation({
         if (!order) throw new Error("Order not found");
         if (order.status !== 'active') throw new Error("Order is not active");
 
+        // Fetch product types once for all items
+        const allItems = await ctx.db
+            .query("order_items")
+            .withIndex("by_order", q => q.eq("order_id", args.orderId))
+            .collect();
+        
+        const productTypeIds = [...new Set(allItems.map(item => item.product_type))];
+        const productTypes = await Promise.all(
+            productTypeIds.map(id => ctx.db.get(id))
+        );
+        const typeMap = new Map(productTypes.filter(Boolean).map(t => [t!._id, t!]));
+
         // 1. PROCESS THE RETURNS (Existing Logic)
         for (const ret of args.returns) {
             if (ret.returnQty <= 0) continue;
 
             const item = await ctx.db.get(ret.itemId);
             if (!item) continue;
-            if (item.product_type === 'service') continue;
+            
+            const productType = typeMap.get(item.product_type);
+            const isService = productType?.key === 'service';
+            if (isService) continue;
 
             const currentReturned = item.returned_quantity || 0;
             const remaining = item.quantity - currentReturned;
@@ -367,14 +463,16 @@ export const returnPartial = mutation({
             });
         }
 
-        // 2. CHECK IF EVERYTHING IS RETURNED
-        const allItems = await ctx.db
+        // 2. RE-FETCH ITEMS TO CHECK IF EVERYTHING IS RETURNED
+        const updatedItems = await ctx.db
             .query("order_items")
             .withIndex("by_order", q => q.eq("order_id", args.orderId))
             .collect();
 
-        const allReturned = allItems.every(item => {
-            if (item.product_type === 'service') return true;
+        const allReturned = updatedItems.every(item => {
+            const productType = typeMap.get(item.product_type);
+            const isService = productType?.key === 'service';
+            if (isService) return true;
             return (item.returned_quantity || 0) >= item.quantity;
         });
 

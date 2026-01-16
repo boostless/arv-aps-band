@@ -98,8 +98,6 @@ async function handleFileUpload(file: File, type: 'invoice' | 'act') {
 
 // 3. UPDATE SAVE (Send Data)
 async function handleSave() {
-    if (!settings.value) return;
-
     try {
         await saveSettings({
             business_name: form.value.business_name,
@@ -124,10 +122,18 @@ async function handleSave() {
                 swift: b.swift || undefined
             })),
 
-            employees: form.value.employees.filter(e => e.name.trim() !== '')
+            employees: form.value.employees.length > 0
+                ? form.value.employees
+                    .filter(e => e.name.trim() !== '')
+                    .map(e => ({
+                        name: e.name,
+                        role: e.role || undefined
+                    }))
+                : undefined
         });
         showToast('Settings saved', 'success');
     } catch (err: any) {
+        console.error('Save settings error:', err);
         showToast(err.toString().replace('Error: ', ''), 'error');
     }
 }
