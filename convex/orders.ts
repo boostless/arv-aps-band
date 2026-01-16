@@ -26,6 +26,7 @@ export const create = mutation({
         type: v.union(v.literal('rental'), v.literal('sale')),
         created_by: v.optional(v.string()),
         notes: v.optional(v.string()),
+        address: v.optional(v.string()),
         items: v.array(v.object({
             product: v.id("products"),
             warehouse: v.id("warehouses"),
@@ -106,6 +107,7 @@ export const create = mutation({
 
             created_by: args.created_by || 'System',
             notes: args.notes,
+            address: args.address,
         });
 
         // 7. CREATE ITEMS & DEDUCT STOCK

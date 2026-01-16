@@ -5,6 +5,7 @@ export const orderFields = {
     contract_number: v.number(),  // e.g. 1001
     customer: v.id('customers'),
     next_billing_date: v.optional(v.number()),
+    address: v.optional(v.string()), // Delivery/Service address
 
     // Dates
     start_date: v.number(),      // Unix timestamp

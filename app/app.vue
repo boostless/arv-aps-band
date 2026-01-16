@@ -1,4 +1,12 @@
 <script setup lang="ts">
+useHead({
+  meta: [
+    { name: 'robots', content: 'noindex, nofollow' },
+    { name: 'googlebot', content: 'noindex, nofollow' },
+    { name: 'bingbot', content: 'noindex, nofollow' }
+  ]
+})
+
 import { api } from '~~/convex/_generated/api';
 
 // Auto-initialize defaults on first load

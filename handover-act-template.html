@@ -1,364 +1,571 @@
 <!DOCTYPE html>
 <html lang="lt">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Išdavimo-priėmimo-grąžinimo aktas</title>
+
     <style>
+        /* =========================
+       A4 + Gotenberg/PDF printing
+       ========================= */
+        @page {
+            size: A4;
+            margin: 14mm 14mm 16mm 14mm;
+        }
+
+        html,
+        body {
+            height: 100%;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
+            margin: 0;
+            padding: 0;
+            /* use @page margin */
             font-family: Arial, sans-serif;
-            font-size: 10pt;
-            line-height: 1.3;
-            color: #000;
-            padding: 30px;
+            font-size: 10.2pt;
+            line-height: 1.4;
+            color: #0b1220;
+            background: #fff;
         }
-        
+
+        :root {
+            --ink: #0b1220;
+            --muted: #667085;
+            --line: #e6e8ec;
+            --soft: #f6f7f9;
+        }
+
+        .page {
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .no-break {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .keep-together {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* =========================
+       Header
+       ========================= */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #333;
+            gap: 12mm;
+            padding-bottom: 6mm;
+            margin-bottom: 6mm;
+            border-bottom: 1px solid var(--line);
         }
-        
+
         .company-services {
             flex: 1;
+            min-width: 0;
         }
-        
-        .service-item {
-            font-size: 9pt;
-            margin: 2px 0;
-            padding-left: 15px;
-            position: relative;
-        }
-        
-        .service-item:before {
-            content: "▶";
-            position: absolute;
-            left: 0;
-            color: #1976d2;
-            font-size: 8pt;
-        }
-        
+
         .contact-info {
-            text-align: center;
             flex: 1;
-            font-size: 9pt;
+            text-align: center;
+            font-size: 9.4pt;
+            color: var(--muted);
         }
-        
+
         .contact-info div {
-            margin: 2px 0;
+            margin: 1mm 0;
         }
-        
+
         .logo-area {
             flex: 1;
             text-align: right;
-            font-size: 24pt;
-            font-weight: bold;
-            color: #1976d2;
+            font-size: 16pt;
+            font-weight: 800;
+            letter-spacing: .2px;
+            color: var(--ink);
+            word-wrap: break-word;
         }
-        
+
+        .service-item {
+            font-size: 9.4pt;
+            color: var(--muted);
+            margin: 1.2mm 0;
+            padding-left: 0;
+        }
+
+        /* modern: remove arrows, keep as clean list */
+        .service-item:before {
+            content: none;
+        }
+
+        /* =========================
+       Title
+       ========================= */
         .document-title {
             text-align: center;
-            margin: 20px 0;
+            margin: 3mm 0 6mm;
         }
-        
+
         .title-main {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .title-sub {
             font-size: 12pt;
-            font-weight: bold;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .14em;
+            color: var(--muted);
+            margin-bottom: 2mm;
         }
-        
+
+        .title-sub {
+            font-size: 15pt;
+            font-weight: 800;
+            margin-bottom: 2mm;
+            color: var(--ink);
+        }
+
         .title-date {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-top: 5px;
+            font-size: 11.5pt;
+            font-weight: 700;
+            color: var(--muted);
         }
-        
-        .company-details {
-            display: flex;
-            justify-content: space-between;
-            margin: 15px 0;
-            font-size: 9pt;
+
+        /* =========================
+       Company details blocks
+       ========================= */
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3mm 10mm;
+            padding: 4mm 4.5mm;
+            border: 1px solid var(--line);
+            background: #fff;
+            margin: 0 0 5mm 0;
         }
-        
-        .detail-label {
-            font-weight: bold;
+
+        .detail {
+            font-size: 9.8pt;
+            color: var(--ink);
+            min-width: 0;
         }
-        
+
+        .detail .label {
+            display: block;
+            font-size: 8.4pt;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-weight: 700;
+            margin-bottom: 1mm;
+        }
+
+        .detail .value {
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .detail .value.normal {
+            font-weight: 600;
+        }
+
+        /* =========================
+       Table
+       ========================= */
         table {
             width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 9pt;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--line);
+            overflow: hidden;
         }
-        
-        th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-            padding: 8px 4px;
+
+        thead {
+            display: table-header-group;
+        }
+
+        /* repeat on new pages */
+        tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        thead th {
+            background: var(--soft);
+            color: var(--muted);
+            font-weight: 700;
+            font-size: 8.2pt;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            padding: 2.6mm 2.4mm;
+            border-bottom: 1px solid var(--line);
             text-align: left;
-            border: 1px solid #333;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 2.4mm 2.4mm;
+            border-bottom: 1px solid var(--line);
+            font-size: 9.6pt;
             vertical-align: middle;
         }
-        
-        td {
-            padding: 6px 4px;
-            border: 1px solid #333;
-            vertical-align: middle;
+
+        tbody tr:nth-child(even) td {
+            background: #fbfbfc;
         }
-        
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
         .text-center {
             text-align: center;
         }
-        
+
         .text-right {
             text-align: right;
         }
-        
-        .totals-row {
-            background-color: #f9f9f9;
-            font-weight: bold;
+
+        .mono {
+            font-variant-numeric: tabular-nums;
         }
-        
-        .summary-section {
-            margin: 20px 0;
+
+        /* Column widths tuned for A4 */
+        .col-name {
+            width: 30%;
+        }
+
+        .col-qty {
+            width: 8%;
+        }
+
+        .col-w {
+            width: 10%;
+        }
+
+        .col-unitv {
+            width: 13%;
+        }
+
+        .col-totalv {
+            width: 13%;
+        }
+
+        .col-day {
+            width: 13%;
+        }
+
+        .col-daytotal {
+            width: 13%;
+        }
+
+        /* =========================
+       Summary
+       ========================= */
+        .summary {
+            margin-top: 6mm;
+            border: 1px solid var(--line);
+            padding: 4mm 4.5mm;
+            display: grid;
+            gap: 2.2mm;
             font-size: 10pt;
         }
-        
+
         .summary-row {
             display: flex;
             justify-content: space-between;
-            margin: 8px 0;
+            gap: 10mm;
         }
-        
+
         .summary-label {
-            font-weight: bold;
+            color: var(--muted);
+            font-weight: 700;
+            letter-spacing: .02em;
+            white-space: nowrap;
         }
-        
-        .signature-section {
-            margin-top: 30px;
-            border: 1px solid #333;
-            padding: 0;
+
+        .summary-value {
+            font-weight: 700;
+            text-align: right;
+            overflow-wrap: anywhere;
         }
-        
+
+        /* =========================
+       Signatures
+       ========================= */
         .signature-table {
             width: 100%;
-            border: none;
+            margin-top: 6mm;
+            border: 1px solid var(--line);
+            border-collapse: separate;
+            border-spacing: 0;
         }
-        
+
         .signature-table td {
-            border: 1px solid #333;
-            padding: 10px;
+            border-top: 1px solid var(--line);
+            border-right: 1px solid var(--line);
+            padding: 4mm 4mm;
             vertical-align: top;
+            height: 22mm;
+            /* consistent signature height */
         }
-        
+
+        .signature-table tr:first-child td {
+            border-top: none;
+        }
+
+        .signature-table td:last-child {
+            border-right: none;
+        }
+
         .signature-label {
-            font-weight: bold;
-            margin-bottom: 30px;
+            font-size: 8.2pt;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-weight: 700;
+            margin-bottom: 8mm;
         }
-        
-        .signature-line {
-            border-bottom: 1px solid #666;
-            margin: 5px 0;
-            min-height: 20px;
+
+        .sig-value {
+            font-weight: 700;
+            color: var(--ink);
         }
-        
+
+        .sig-line {
+            margin-top: 2mm;
+            border-bottom: 1px solid var(--line);
+            height: 6mm;
+        }
+
+        .sig-muted {
+            background: var(--soft);
+        }
+
+        /* =========================
+       Footer note
+       ========================= */
         .footer-note {
-            margin-top: 15px;
-            font-size: 8pt;
-            color: #666;
-            line-height: 1.4;
+            margin-top: 5mm;
+            font-size: 8.6pt;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        /* safety for long strings */
+        td,
+        th,
+        .value,
+        .summary-value {
+            overflow-wrap: anywhere;
         }
     </style>
 </head>
+
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="company-services">
-            <div class="service-item">Pastoliai</div>
-            <div class="service-item">Statybinė įranga</div>
-            <div class="service-item">Sandėliavimo technika</div>
-            <div class="service-item">Nuoma, pardavimas, servisas</div>
+    <div class="page">
+
+        <!-- Header -->
+        <div class="header no-break">
+            <div class="company-services">
+                <div class="service-item">Pastoliai</div>
+                <div class="service-item">Statybinė įranga</div>
+                <div class="service-item">Sandėliavimo technika</div>
+                <div class="service-item">Nuoma, pardavimas, servisas</div>
+            </div>
+
+            <div class="contact-info">
+                <div><strong style="color:var(--ink);">Darbo laikas:</strong> {{work_hours}}</div>
+                <div><strong style="color:var(--ink);">Tel.:</strong> {{seller_phone}}</div>
+                {{#if seller_fax}}
+                <div><strong style="color:var(--ink);">Faks.:</strong> {{seller_fax}}</div>
+                {{/if}}
+            </div>
+
+            <div class="logo-area">
+                {{seller_name}}
+            </div>
         </div>
-        
-        <div class="contact-info">
-            <div><strong>Darbo laikas:</strong> {{work_hours}}</div>
-            <div><strong>Tel.:</strong> {{seller_phone}}</div>
-            {{#if seller_fax}}
-            <div><strong>Tel.:</strong> {{seller_fax}}</div>
+
+        <!-- Document Title -->
+        <div class="document-title no-break">
+            <div class="title-main">Mūro stalų</div>
+            <div class="title-sub">Išdavimo-priėmimo-grąžinimo aktas</div>
+            <div class="title-date">{{date}}</div>
+        </div>
+
+        <!-- Company Details (modern, clean blocks) -->
+        <div class="details no-break">
+            <div class="detail">
+                <span class="label">Išduota įmonei</span>
+                <span class="value">{{customer_name}}</span>
+            </div>
+            <div class="detail">
+                <span class="label">Įm. k.</span>
+                <span class="value normal">{{customer_imones_kodas}}</span>
+            </div>
+
+            <div class="detail" style="grid-column: 1 / 2;">
+                <span class="label">Įmonė registruota adresu</span>
+                <span class="value normal">{{customer_address}}</span>
+            </div>
+            <div class="detail">
+                <span class="label">PVM/k.</span>
+                <span class="value normal">{{customer_pvm_kodas}}</span>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-name">Detalės pavadinimas</th>
+                    <th class="text-center col-qty">Kiekis</th>
+                    <th class="text-center col-w">Masė<br>kg.</th>
+                    <th class="text-center col-unitv">Turto vertė<br>vnt. Eur.</th>
+                    <th class="text-center col-totalv">Turto vertė<br>viso Eur.</th>
+                    <th class="text-center col-day">Paros<br>kaina</th>
+                    <th class="text-center col-daytotal">Bendra<br>paros kaina</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {{#each items}}
+                <tr>
+                    <td>{{label}}</td>
+                    <td class="text-center mono">{{quantity}}</td>
+                    <td class="text-center mono">{{weight_kg}}</td>
+                    <td class="text-right mono">{{unit_price}}</td>
+                    <td class="text-right mono">{{total_value}}</td>
+                    <td class="text-right mono">{{daily_rate}}</td>
+                    <td class="text-right mono">{{total_daily}}</td>
+                </tr>
+                {{/each}}
+
+                <tr style="background:var(--soft); font-weight:800;">
+                    <td colspan="2" class="text-right"><strong>Bendras svoris kg.:</strong></td>
+                    <td class="text-center mono"><strong>{{total_weight}}</strong></td>
+                    <td class="text-right"><strong>Turto<br>vertė:</strong></td>
+                    <td class="text-right mono"><strong>{{total_value_sum}}</strong></td>
+                    <td class="text-right"><strong>Suma:</strong></td>
+                    <td class="text-right mono"><strong>{{total_daily_sum}}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Summary Section -->
+        <div class="summary keep-together">
+            {{#if notes}}
+            <div class="summary-row">
+                <span class="summary-label">Pastabos</span>
+                <span class="summary-value">{{notes}}</span>
+            </div>
             {{/if}}
-        </div>
-        
-        <div class="logo-area">
-            {{seller_name}}
-        </div>
-    </div>
 
-    <!-- Document Title -->
-    <div class="document-title">
-        <div class="title-main">Mūro stalų</div>
-        <div class="title-sub">Išdavimo-priėmimo-grąžinimo aktas</div>
-        <div class="title-date">{{date}}</div>
-    </div>
+            <div class="summary-row">
+                <span class="summary-label">Išduoto komplekto kaina</span>
+                <span class="summary-value">{{komplekto_kaina}} Eur./para + PVM</span>
+            </div>
 
-    <!-- Company Details -->
-    <div class="company-details">
-        <div>
-            <span class="detail-label">Išduota įmonei:</span> {{customer_name}}
-        </div>
-        <div>
-            <span class="detail-label">Įm. k.:</span> {{customer_imones_kodas}}
-        </div>
-    </div>
-    
-    <div class="company-details">
-        <div>
-            <span class="detail-label">Įmonė registruota adresu:</span> {{customer_address}}
-        </div>
-        <div>
-            <span class="detail-label">PVM/k.:</span> {{customer_pvm_kodas}}
-        </div>
-    </div>
+            <div class="summary-row">
+                <span class="summary-label">Transporto paslaugos</span>
+                <span class="summary-value">Eur./reisas + PVM</span>
+            </div>
 
-    <!-- Items Table -->
-    <table>
-        <thead>
+            <div class="summary-row">
+                <span class="summary-label">Avansu sumokėta</span>
+                <span class="summary-value">Eur.</span>
+            </div>
+        </div>
+
+        <!-- Signatures -->
+        <table class="signature-table keep-together">
             <tr>
-                <th style="width: 30%;">Detalės pavadinimas</th>
-                <th class="text-center" style="width: 8%;">Kiekis</th>
-                <th class="text-center" style="width: 10%;">Masė<br>kg.</th>
-                <th class="text-center" style="width: 13%;">Turto vertė<br>vnt. Eur.</th>
-                <th class="text-center" style="width: 13%;">Turto vertė<br>viso Eur.</th>
-                <th class="text-center" style="width: 13%;">Paros<br>kaina</th>
-                <th class="text-center" style="width: 13%;">Bendra<br>paros kaina</th>
+                <td style="width:25%;">
+                    <div class="signature-label">Išdavė</div>
+                    <div class="sig-value">{{created_by}}</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td style="width:25%;">
+                    <div class="signature-label">Parašas</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td style="width:25%;">
+                    <div class="signature-label">Data</div>
+                    <div class="sig-value">{{date}}</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td style="width:25%;" class="sig-muted"></td>
             </tr>
-        </thead>
-        <tbody>
-            {{#each items}}
+
             <tr>
-                <td>{{label}}</td>
-                <td class="text-center">{{quantity}}</td>
-                <td class="text-center">{{weight_kg}}</td>
-                <td class="text-right">{{unit_price}}</td>
-                <td class="text-right">{{total_value}}</td>
-                <td class="text-right">{{daily_rate}}</td>
-                <td class="text-right">{{total_daily}}</td>
+                <td>
+                    <div class="signature-label">Priėmė</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td>
+                    <div class="signature-label">Parašas</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td>
+                    <div class="signature-label">Data</div>
+                    <div class="sig-value">{{date}}</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td class="sig-muted"></td>
             </tr>
-            {{/each}}
-            <tr class="totals-row">
-                <td colspan="2" class="text-right"><strong>Bendras svoris kg.:</strong></td>
-                <td class="text-center"><strong>{{total_weight}}</strong></td>
-                <td class="text-right"><strong>Turto<br>vertė:</strong></td>
-                <td class="text-right"><strong>{{total_value_sum}}</strong></td>
-                <td class="text-right"><strong>Suma:</strong></td>
-                <td class="text-right"><strong>{{total_daily_sum}}</strong></td>
+
+            <tr>
+                <td>
+                    <div class="signature-label">Grąžino</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td>
+                    <div class="signature-label">Parašas</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td>
+                    <div class="signature-label">Data</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td class="sig-muted"></td>
             </tr>
-        </tbody>
-    </table>
 
-    <!-- Summary Section -->
-    <div class="summary-section">
-        {{#if notes}}
-        <div class="summary-row">
-            <span class="summary-label">Pastabos:</span>
-            <span>{{notes}}</span>
-        </div>
-        {{/if}}
-        <div class="summary-row">
-            <span class="summary-label">Išduoto komplekto kaina:</span>
-            <span>{{komplekto_kaina}} Eur./para + PVM</span>
-        </div>
-        <div class="summary-row">
-            <span class="summary-label">Transporto paslaugos:</span>
-            <span>Eur./reisas + PVM</span>
-        </div>
-        <div class="summary-row">
-            <span class="summary-label">Avansu sumokėta:</span>
-            <span>Eur.</span>
-        </div>
-    </div>
+            <tr>
+                <td>
+                    <div class="signature-label">Priėmė</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td>
+                    <div class="signature-label">Parašas</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td>
+                    <div class="signature-label">Data</div>
+                    <div class="sig-line"></div>
+                </td>
+                <td class="sig-muted"></td>
+            </tr>
+        </table>
 
-    <!-- Signature Section -->
-    <table class="signature-table">
-        <tr>
-            <td style="width: 25%;">
-                <div class="signature-label">Išdavė:</div>
-                <div class="signature-line">{{created_by}}</div>
-            </td>
-            <td style="width: 25%;">
-                <div class="signature-label">Parašas</div>
-                <div class="signature-line"></div>
-            </td>
-            <td style="width: 25%;">
-                <div class="signature-label">Data</div>
-                <div class="signature-line">{{date}}</div>
-            </td>
-            <td style="width: 25%;"></td>
-        </tr>
-        <tr>
-            <td>
-                <div class="signature-label">Priėmė:</div>
-                <div class="signature-line"></div>
-            </td>
-            <td>
-                <div class="signature-label"></div>
-                <div class="signature-line"></div>
-            </td>
-            <td>
-                <div class="signature-label"></div>
-                <div class="signature-line">{{date}}</div>
-            </td>
-            <td style="background-color: #f5f5f5;"></td>
-        </tr>
-        <tr>
-            <td>
-                <div class="signature-label">Grąžino:</div>
-                <div class="signature-line"></div>
-            </td>
-            <td>
-                <div class="signature-label"></div>
-                <div class="signature-line"></div>
-            </td>
-            <td>
-                <div class="signature-label"></div>
-                <div class="signature-line"></div>
-            </td>
-            <td style="background-color: #f5f5f5;"></td>
-        </tr>
-        <tr>
-            <td>
-                <div class="signature-label">Priėmė:</div>
-                <div class="signature-line"></div>
-            </td>
-            <td>
-                <div class="signature-label"></div>
-                <div class="signature-line"></div>
-            </td>
-            <td>
-                <div class="signature-label"></div>
-                <div class="signature-line"></div>
-            </td>
-            <td style="background-color: #f5f5f5;"></td>
-        </tr>
-    </table>
+        <!-- Footer Note -->
+        <div class="footer-note">
+            Papildomi išdavimai ir grąžinimai fiksuojami priedu Nr. 1 ir Nr. 2. Nuomai pasibaigus jie yra
+            įvertinami.<br>
+            Priėmimo akto pasirašymo metu klientas neša pilną turtinę atsakomybę už išnuomotą jam turtą.
+        </div>
 
-    <!-- Footer Note -->
-    <div class="footer-note">
-        Papildomi išdavimai ir grąžinimai fiksuojami priedu Nr. 1 ir Nr. 2. Nuomai pasibaigus jie yra įvertinami.<br>
-        Priėmimo akto pasirašymo metu klientas neša pilną turtinę atsakomybę už išnuomotą jam turtą.
     </div>
 </body>
+
 </html>

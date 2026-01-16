@@ -20,6 +20,7 @@ const form = ref({
     start_date: new Date().toISOString().substr(0, 10), // YYYY-MM-DD
     end_date: null as string | null,
     notes: '',
+    address: '',
     type: 'rental' as 'rental' | 'sale',
     items: [] as any[]
 });
@@ -114,18 +115,18 @@ const subtotalDisplay = computed(() => {
 // -- SUBMIT --
 async function handleSubmit() {
     if (!form.value.customer) {
-        showToast('Please select a customer', 'error');
+        showToast('Prašome pasirinkti klientą', 'error');
         return;
     }
     if (form.value.items.length === 0) {
-        showToast('Please add at least one item', 'error');
+        showToast('Prašome pridėti bent vieną prekę', 'error');
         return;
     }
 
     // Validate all items have warehouse
     for (const item of form.value.items) {
         if (item.type === 'product' && !item.warehouseId) {
-            showToast(`Please select a warehouse for ${item.productObj?.label || 'Item'}`, 'error');
+            showToast(`Prašome pasirinkti sandėlį ${item.productObj?.label || 'prekė'}`, 'error');
             return;
         }
     }
@@ -148,11 +149,12 @@ async function handleSubmit() {
             end_date: form.value.end_date ? new Date(form.value.end_date).getTime() : undefined,
             type: form.value.type,
             items: payloadItems,
-            created_by: 'Admin', // Replace with Auth user later
-            notes: form.value.notes
+            created_by: 'Sistema', // Replace with Auth user later
+            notes: form.value.notes,
+            address: form.value.address || undefined
         });
 
-        showToast('Contract created successfully', 'success');
+        showToast('Užsakymas sėkmingai sukurtas', 'success');
         router.push('/orders');
 
     } catch (err: any) {
@@ -198,7 +200,13 @@ async function handleSubmit() {
                                 </v-col>
                             </v-row>
                             <v-row dense class="mt-2">
-                                <v-col cols="12">
+                                <v-col cols="12" md="6">
+                                    <v-text-field v-model="form.address" label="Adresas"
+                                        placeholder="Pristatymo arba paslaugos adresas"
+                                        variant="outlined" density="comfortable" hide-details
+                                        prepend-inner-icon="mdi-map-marker"></v-text-field>
+                                </v-col>
+                                <v-col cols="12" md="6">
                                     <v-textarea v-model="form.notes" label="Pastabos / Instrukcijos"
                                         placeholder="pvz. Pristatyti prie galinio vartų, Skambinti atvykus..." rows="2"
                                         variant="outlined" density="comfortable" hide-details></v-textarea>
