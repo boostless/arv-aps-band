@@ -1,0 +1,9 @@
+{
+  "node": {
+    "allowedOrigins": [
+      "http://localhost:3000",
+      "https://arveriva.fuksus.lt"
+    ]
+  },
+  "deployment": "https://backend-u40w8sc44s8sok4ogosoo04o.fuksus.lt"
+}
