@@ -26,12 +26,12 @@ const form = ref({
 
 // -- TABLE HEADERS --
 const headers = [
-    { title: 'Label', key: 'label', align: 'start' as const },
-    { title: 'Code', key: 'code' },
-    { title: 'Abbreviation', key: 'abbreviation' },
-    { title: 'Type', key: 'is_system' },
+    { title: 'Kodas', key: 'code' },
+    { title: 'Pavadinimas', key: 'label', align: 'start' as const },
+    { title: 'Santrumpa', key: 'abbreviation' },
+    { title: 'Tipas', key: 'is_system' },
     {
-        title: 'Actions',
+        title: 'Veiksmai',
         key: 'actions',
         sortable: false,
         align: 'end' as const  // <--- ADD THIS
@@ -101,11 +101,11 @@ async function handleDelete() {
     <div>
         <div class="d-flex align-center justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Units</h1>
-                <div class="text-subtitle-1 text-medium-emphasis">Manage measurement units</div>
+                <h1 class="text-h4 font-weight-bold">Vienetai</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">Valdykite matavimo vienetus</div>
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" elevation="2" @click="openCreate">
-                Create Unit
+                Pridėti vienetą
             </v-btn>
         </div>
 
@@ -113,10 +113,10 @@ async function handleDelete() {
             <v-data-table :headers="headers" :items="units || []" :loading="isLoading" hover>
                 <template v-slot:item.is_system="{ item }">
                     <v-chip v-if="item.is_system" color="blue-grey" size="small" variant="flat" prepend-icon="mdi-lock">
-                        System
+                        Sisteminis
                     </v-chip>
                     <v-chip v-else color="success" size="small" variant="tonal">
-                        Custom
+                        Nestandartinis
                     </v-chip>
                 </template>
 
@@ -128,7 +128,7 @@ async function handleDelete() {
                             @click="confirmDelete(item._id)"></v-btn>
                     </div>
                     <div v-else class="text-caption text-disabled font-italic">
-                        Protected
+                        Apsaugotas
                     </div>
                 </template>
             </v-data-table>
@@ -136,23 +136,23 @@ async function handleDelete() {
 
         <v-dialog v-model="dialog" max-width="500">
             <v-card>
-                <v-card-title>{{ editingId ? 'Edit Unit' : 'Add New Unit' }}</v-card-title>
+                <v-card-title>{{ editingId ? 'Redaguoti vienetą' : 'Naujas vienetas' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense>
                             <v-col cols="12">
-                                <v-text-field v-model="form.label" label="Label" variant="outlined" density="compact"
+                                <v-text-field v-model="form.label" label="Pavadinimas" variant="outlined" density="compact"
                                     autofocus></v-text-field>
                             </v-col>
 
                             <v-col cols="6">
-                                <v-text-field v-model="form.code" label="Code" variant="outlined" density="compact"
-                                    :disabled="!!editingId" hint="Cannot be changed after creation"
+                                <v-text-field v-model="form.code" label="Kodas" variant="outlined" density="compact"
+                                    :disabled="!!editingId" hint="Negalima keisti po sukūrimo"
                                     persistent-hint></v-text-field>
                             </v-col>
 
                             <v-col cols="6">
-                                <v-text-field v-model="form.abbreviation" label="Abbreviation" variant="outlined"
+                                <v-text-field v-model="form.abbreviation" label="Santrumpa" variant="outlined"
                                     density="compact"></v-text-field>
                             </v-col>
                         </v-row>
@@ -160,9 +160,9 @@ async function handleDelete() {
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+                    <v-btn variant="text" @click="dialog = false">Atšaukti</v-btn>
                     <v-btn color="primary" variant="flat" :loading="isCreating || isUpdating" @click="handleSubmit">
-                        {{ editingId ? 'Update' : 'Create' }}
+                        {{ editingId ? 'Atnaujinti' : 'Sukurti' }}
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -170,12 +170,12 @@ async function handleDelete() {
 
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
-                <v-card-title class="text-h6">Delete Unit?</v-card-title>
-                <v-card-text>Are you sure you want to delete this unit? This action cannot be undone.</v-card-text>
+                <v-card-title class="text-h6">Ištrinti vienetą?</v-card-title>
+                <v-card-text>Ar tikrai norite ištrinti šį vienetą? Šio veiksmo atšaukti negalima.</v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-                    <v-btn color="error" variant="flat" :loading="isDeleting" @click="handleDelete">Delete</v-btn>
+                    <v-btn variant="text" @click="deleteDialog = false">Atšaukti</v-btn>
+                    <v-btn color="error" variant="flat" :loading="isDeleting" @click="handleDelete">Ištrinti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

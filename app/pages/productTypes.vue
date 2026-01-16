@@ -30,11 +30,11 @@ const form = ref({
 
 // -- TABLE HEADERS --
 const headers = [
-    { title: 'Label', key: 'label', align: 'start' as const },
-    { title: 'Key', key: 'key' }, // ✅ Changed Code to Key
-    { title: 'Type', key: 'is_system' },
+    { title: 'Raktas', key: 'key' }, // ✅ Changed Code to Key
+    { title: 'Pavadinimas', key: 'label', align: 'start' as const },
+    { title: 'Tipas', key: 'is_system' },
     {
-        title: 'Actions',
+        title: 'Veiksmai',
         key: 'actions',
         sortable: false,
         align: 'end' as const
@@ -103,11 +103,11 @@ async function handleDelete() {
     <div>
         <div class="d-flex align-center justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Product Types</h1>
-                <div class="text-subtitle-1 text-medium-emphasis">Manage categories for grouping</div>
+                <h1 class="text-h4 font-weight-bold">Produktų tipai</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">Valdykite kategorijas grupavimui</div>
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" elevation="2" @click="openCreate">
-                Create Type
+                Pridėti tipą
             </v-btn>
         </div>
 
@@ -116,10 +116,10 @@ async function handleDelete() {
 
                 <template v-slot:item.is_system="{ item }">
                     <v-chip v-if="item.is_system" color="blue-grey" size="small" variant="flat" prepend-icon="mdi-lock">
-                        System
+                        Sisteminis
                     </v-chip>
                     <v-chip v-else color="success" size="small" variant="tonal">
-                        Custom
+                        Nestandartinis
                     </v-chip>
                 </template>
 
@@ -131,7 +131,7 @@ async function handleDelete() {
                             @click="confirmDelete(item._id)"></v-btn>
                     </div>
                     <div v-else class="text-caption text-disabled font-italic">
-                        Protected
+                        Apsaugotas
                     </div>
                 </template>
             </v-data-table>
@@ -139,18 +139,18 @@ async function handleDelete() {
 
         <v-dialog v-model="dialog" max-width="500">
             <v-card>
-                <v-card-title>{{ editingId ? 'Edit Type' : 'Add New Type' }}</v-card-title>
+                <v-card-title>{{ editingId ? 'Redaguoti' : 'Naujas tipas' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense>
                             <v-col cols="12">
-                                <v-text-field v-model="form.label" label="Label (UI Name)"
+                                <v-text-field v-model="form.label" label="Pavadinimas (UI pavadinimas)"
                                     placeholder="e.g. Consumables" variant="outlined" density="compact"
                                     autofocus></v-text-field>
                             </v-col>
 
                             <v-col cols="12">
-                                <v-text-field v-model="form.key" label="Key (Internal ID)"
+                                <v-text-field v-model="form.key" label="Raktas (Vidinis ID)"
                                     placeholder="e.g. consumables" variant="outlined" density="compact"
                                     :disabled="!!editingId" hint="Used for grouping logic. Cannot be changed."
                                     persistent-hint></v-text-field>
@@ -160,9 +160,9 @@ async function handleDelete() {
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+                    <v-btn variant="text" @click="dialog = false">Atšaukti</v-btn>
                     <v-btn color="primary" variant="flat" :loading="isCreating || isUpdating" @click="handleSubmit">
-                        {{ editingId ? 'Update' : 'Create' }}
+                        {{ editingId ? 'Atnaujinti' : 'Sukurti' }}
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -170,13 +170,12 @@ async function handleDelete() {
 
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
-                <v-card-title class="text-h6">Delete Type?</v-card-title>
-                <v-card-text>Are you sure? This might break grouping for existing products using this
-                    type.</v-card-text>
+                <v-card-title class="text-h6">Ištrinti tipą?</v-card-title>
+                <v-card-text>Ar tikrai norite ištrinti šį tipą? Tai gali sutrikdyti grupavimą esamiems produktams, naudojantiems šį tipą.</v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-                    <v-btn color="error" variant="flat" :loading="isDeleting" @click="handleDelete">Delete</v-btn>
+                    <v-btn variant="text" @click="deleteDialog = false">Atšaukti</v-btn>
+                    <v-btn color="error" variant="flat" :loading="isDeleting" @click="handleDelete">Ištrinti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

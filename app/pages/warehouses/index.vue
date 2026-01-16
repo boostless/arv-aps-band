@@ -81,10 +81,10 @@ async function handleArchive() {
 
 // -- HEADERS --
 const headers = [
-    { title: 'Warehouse Name', key: 'label' },
-    { title: 'Code', key: 'code' },
-    { title: 'Status', key: 'archived' },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Kodas', key: 'code' },
+    { title: 'Sandėlio pavadinimas', key: 'label' },
+    { title: 'Būsena', key: 'archived' },
+    { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
 </script>
 
@@ -92,21 +92,21 @@ const headers = [
     <div>
         <div class="d-flex align-center justify-space-between mb-6">
             <div>
-                <h1 class="text-h4 font-weight-bold">Warehouses</h1>
-                <div class="text-subtitle-1 text-medium-emphasis">Manage storage locations</div>
+                <h1 class="text-h4 font-weight-bold">Sandėliai</h1>
+                <div class="text-subtitle-1 text-medium-emphasis">Valdykite sandėlio vietas</div>
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">
-                Add Warehouse
+                Pridėti sandėlį
             </v-btn>
         </div>
 
-        <v-switch v-model="showArchived" label="Show Archived" color="primary" hide-details class="mb-4"></v-switch>
+        <v-switch v-model="showArchived" label="Rodyti archyvuotus" color="primary" hide-details class="mb-4"></v-switch>
 
         <v-card border flat>
             <v-data-table :headers="headers" :items="warehouses || []" :loading="isLoading" hover>
                 <template v-slot:item.archived="{ item }">
                     <v-chip :color="item.archived ? 'grey' : 'success'" size="small" variant="flat">
-                        {{ item.archived ? 'Archived' : 'Active' }}
+                        {{ item.archived ? 'Archyvuotas' : 'Aktyvus' }}
                     </v-chip>
                 </template>
 
@@ -120,7 +120,7 @@ const headers = [
                             @click="confirmArchive(item._id)"></v-btn>
                     </div>
                     <div v-else class="text-caption text-disabled">
-                        Read-only
+                        Tik skaitymui
                     </div>
                 </template>
             </v-data-table>
@@ -128,17 +128,17 @@ const headers = [
 
         <v-dialog v-model="dialog" max-width="500">
             <v-card>
-                <v-card-title>{{ editingId ? 'Edit Warehouse' : 'New Warehouse' }}</v-card-title>
+                <v-card-title>{{ editingId ? 'Redaguoti sandėlį' : 'Naujas sandėlis' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense class="mt-2">
                             <v-col cols="12">
-                                <v-text-field v-model="form.label" label="Name" placeholder="e.g. Main Warehouse"
+                                <v-text-field v-model="form.label" label="Pavadinimas" placeholder="pvz. Pagrindinis sandėlis"
                                     variant="outlined" autofocus></v-text-field>
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="form.code" label="Code" placeholder="e.g. WH-01"
-                                    variant="outlined" :disabled="!!editingId" hint="Unique identifier"
+                                <v-text-field v-model="form.code" label="Kodas" placeholder="pvz. WH-01"
+                                    variant="outlined" :disabled="!!editingId" hint="Unikalus identifikatorius sandėliui"
                                     persistent-hint></v-text-field>
                             </v-col>
                         </v-row>
@@ -146,9 +146,9 @@ const headers = [
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+                    <v-btn variant="text" @click="dialog = false">Atšaukti</v-btn>
                     <v-btn color="primary" variant="flat" :loading="isCreating || isUpdating" @click="handleSubmit">
-                        {{ editingId ? 'Update' : 'Create' }}
+                        {{ editingId ? 'Atnaujinti' : 'Sukurti' }}
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -156,14 +156,14 @@ const headers = [
 
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
-                <v-card-title>Archive Warehouse?</v-card-title>
+                <v-card-title>Archyvuoti sandėlį?</v-card-title>
                 <v-card-text>
-                    Are you sure? Inventory in this warehouse will become inaccessible until you restore it.
+                    Ar tikrai? Inventorius šiame sandėlyje taps neprieinamas, kol jį atkursite.
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archive</v-btn>
+                    <v-btn variant="text" @click="deleteDialog = false">Atšaukti</v-btn>
+                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archyvuoti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
