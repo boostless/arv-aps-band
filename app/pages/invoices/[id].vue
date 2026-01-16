@@ -132,24 +132,27 @@ async function handleDownloadPdf() {
             </div>
             <v-row class="mb-8">
                 <v-col cols="6">
-                    <div class="text-h5 font-weight-bold mb-1">
+                    <div class="text-overline text-grey mb-1">PARDAVĖJAS / SELLER</div>
+                    <div class="text-h5 font-weight-bold mb-2">
                         {{ invoice.settings?.business_name || 'My Company' }}
                     </div>
                     <div class="text-body-2 text-medium-emphasis">
                         {{ invoice.settings?.address }}<br>
-                        Code: {{ invoice.settings?.company_code }}<br>
-                        VAT: {{ invoice.settings?.vat_code }}
+                        <span v-if="invoice.settings?.phone">Tel.: {{ invoice.settings.phone }}</span>
+                        <span v-if="invoice.settings?.fax_number">, Faks: {{ invoice.settings.fax_number }}</span><br>
+                        Įmonės kodas: {{ invoice.settings?.company_code }}<br>
+                        PVM kodas: {{ invoice.settings?.vat_code || '-' }}
                     </div>
                 </v-col>
                 <v-col cols="6" class="text-right">
-                    <div class="text-h4 font-weight-black text-primary mb-1">INVOICE</div>
-                    <div class="text-h6">#{{ invoice.invoice_number }}</div>
-                    <div class="text-subtitle-1 text-grey">
-                        Period: {{ formatDate(invoice.start_date) }} - {{ formatDate(invoice.end_date) }}
+                    <div class="text-h4 font-weight-black text-primary mb-1">SĄSKAITA FAKTŪRA</div>
+                    <div class="text-h6 mb-3">Nr. {{ invoice.invoice_number }}</div>
+                    <div class="text-body-2">
+                        <strong>Išrašymo data:</strong> {{ formatDate(invoice.start_date) }}
                     </div>
-                    <div v-if="invoice.due_date" class="text-subtitle-2 font-weight-bold mt-1"
-                        :class="isOverdue ? 'text-red' : ''">
-                        Due Date: {{ formatDate(invoice.due_date) }}
+                    <div v-if="invoice.due_date" class="text-body-2"
+                        :class="isOverdue ? 'text-red font-weight-bold' : ''">
+                        <strong>Apmokėti iki:</strong> {{ formatDate(invoice.due_date) }}
                     </div>
                 </v-col>
             </v-row>
@@ -158,14 +161,16 @@ async function handleDownloadPdf() {
 
             <v-row class="mb-8">
                 <v-col cols="12">
-                    <div class="text-h6">{{ invoice.customer_name || 'Unknown Customer' }}</div>
+                    <div class="text-overline text-grey mb-1">PIRKĖJAS / BUYER</div>
+                    <div class="text-h6 font-weight-bold mb-1">{{ invoice.customer_name || 'Unknown Customer' }}</div>
                     <div class="text-body-2 text-medium-emphasis">
                         {{ invoice.customer_address }}<br>
-                        <span v-if="invoice.customer_vat">VAT: {{ invoice.customer_vat }}</span>
-                    </div>
-
-                    <div class="text-caption text-grey mt-8 pt-4 border-top">
-                        Invoice created by: {{ invoice.created_by }}
+                        <span v-if="invoice.customer?.company_code || invoice.customer_vat">
+                            Įmonės kodas: {{ invoice.customer?.company_code || '-' }}<br>
+                        </span>
+                        <span v-if="invoice.customer?.vat_code || invoice.customer_vat">
+                            PVM kodas: {{ invoice.customer?.vat_code || invoice.customer_vat || '-' }}
+                        </span>
                     </div>
                 </v-col>
             </v-row>
@@ -173,30 +178,32 @@ async function handleDownloadPdf() {
             <v-table class="mb-8" density="comfortable">
                 <thead>
                     <tr>
-                        <th class="text-left font-weight-bold">Description</th>
-                        <th class="text-center font-weight-bold">Qty</th>
-                        <th class="text-right font-weight-bold">Price</th>
-                        <th class="text-center font-weight-bold">Discount</th>
-                        <th class="text-right font-weight-bold">Total</th>
+                        <th class="text-center font-weight-bold" style="width: 50px;">Eil. Nr.</th>
+                        <th class="text-left font-weight-bold">Pavadinimas</th>
+                        <th class="text-center font-weight-bold" style="width: 70px;">Vnt.</th>
+                        <th class="text-center font-weight-bold" style="width: 80px;">Kiekis</th>
+                        <th class="text-right font-weight-bold" style="width: 100px;">Kaina</th>
+                        <th class="text-right font-weight-bold" style="width: 100px;">Suma be PVM</th>
+                        <th class="text-right font-weight-bold" style="width: 100px;">Suma PVM</th>
+                        <th class="text-right font-weight-bold" style="width: 120px;">Iš viso</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-if="invoice.lineItems && invoice.lineItems.length > 0" v-for="item in invoice.lineItems" :key="item.label">
+                    <tr v-if="invoice.lineItems && invoice.lineItems.length > 0" v-for="(item, index) in invoice.lineItems" :key="item.label">
+                        <td class="text-center">{{ index + 1 }}</td>
                         <td class="py-2">
                             <div class="font-weight-medium">{{ item.label }}</div>
-                            <div class="text-caption text-grey">{{ item.type === 'service' ? 'Service' : 'Rental Product' }}</div>
                         </td>
+                        <td class="text-center">vnt</td>
                         <td class="text-center">{{ item.quantity || '-' }}</td>
-                        <td class="text-right">{{ item.price ? '€' + formatMoney(item.price) : '-' }}</td>
-                        <td class="text-center">-</td>
-                        <td class="text-right font-weight-bold">€{{ formatMoney(item.total) }}</td>
+                        <td class="text-right">€{{ item.price ? formatMoney(item.price) : '-' }}</td>
+                        <td class="text-right">€{{ formatMoney(item.total) }}</td>
+                        <td class="text-right">€{{ formatMoney(Math.round(item.total * (invoice.settings?.tax_rate || 21) / 100)) }}</td>
+                        <td class="text-right font-weight-bold">€{{ formatMoney(item.total + Math.round(item.total * (invoice.settings?.tax_rate || 21) / 100)) }}</td>
                     </tr>
                     <tr v-else>
-                        <td colspan="5" class="py-2">
-                            <div class="font-weight-medium">Rental Services</div>
-                            <div class="text-caption text-grey">
-                                Contract Reference: #{{ invoice.order_id }}
-                            </div>
+                        <td colspan="8" class="py-2 text-center text-caption text-grey">
+                            No line items
                         </td>
                     </tr>
                 </tbody>
@@ -204,27 +211,42 @@ async function handleDownloadPdf() {
 
             <v-row>
                 <v-col cols="6">
-                    <div class="mt-6">
-                        <div class="text-caption font-weight-bold text-grey mb-1">Payment Details:</div>
-                        <div v-for="bank in invoice.settings?.banks" :key="bank.iban" class="text-body-2 mb-2">
+                    <div class="mt-2">
+                        <div class="text-caption font-weight-bold text-grey mb-2">Banko sąskaitos:</div>
+                        <div v-for="(bank, idx) in invoice.settings?.banks" :key="bank.iban" class="text-body-2 mb-2">
                             <strong>{{ bank.name }}</strong><br>
-                            IBAN: {{ bank.iban }}
+                            <span class="text-caption">{{ bank.iban }}</span>
                         </div>
+                    </div>
+
+                    <div class="mt-6 text-body-2">
+                        <div class="font-weight-bold mb-1">Sąskaitos periodas:</div>
+                        <div>{{ formatDate(invoice.start_date) }} - {{ formatDate(invoice.end_date) }}</div>
+                    </div>
+
+                    <div v-if="invoice.customer?.address" class="mt-4 text-body-2">
+                        <div class="font-weight-bold mb-1">Objekto adresas:</div>
+                        <div>{{ invoice.customer.address }}</div>
+                    </div>
+
+                    <div class="mt-6 text-caption text-grey">
+                        <div><strong>Sąskaitą išrašė:</strong> {{ invoice.created_by || '-' }}</div>
+                        <div class="mt-2"><strong>Sąskaitą gavo:</strong> _________________</div>
                     </div>
                 </v-col>
 
                 <v-col cols="4" offset="2">
                     <div class="d-flex justify-space-between mb-2">
-                        <span class="text-medium-emphasis">Subtotal</span>
+                        <span class="text-medium-emphasis">Suma be PVM:</span>
                         <span class="font-weight-medium">€{{ formatMoney(invoice.amount - invoice.tax_amount) }}</span>
                     </div>
                     <div class="d-flex justify-space-between mb-2">
-                        <span class="text-medium-emphasis">VAT</span>
+                        <span class="text-medium-emphasis">Suma PVM:</span>
                         <span class="font-weight-medium">€{{ formatMoney(invoice.tax_amount) }}</span>
                     </div>
                     <v-divider class="my-3"></v-divider>
                     <div class="d-flex justify-space-between text-h5 font-weight-bold bg-grey-lighten-4 pa-3 rounded">
-                        <span>Total</span>
+                        <span>Iš viso:</span>
                         <span>€{{ formatMoney(invoice.amount) }}</span>
                     </div>
                 </v-col>

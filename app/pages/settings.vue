@@ -17,6 +17,7 @@ const form = ref({
     address: '',
     email: '',
     phone: '',
+    fax_number: '',
     tax_rate: 21,
     invoice_start_number: 1,
     invoice_due_days: 14,
@@ -39,6 +40,7 @@ watch(settings, (newVal) => {
 
             email: newVal.email || '',
             phone: newVal.phone || '',
+            fax_number: newVal.fax_number || '',
 
             tax_rate: newVal.tax_rate,
             invoice_start_number: newVal.invoice_start_number,
@@ -107,6 +109,7 @@ async function handleSave() {
 
             email: form.value.email || undefined,
             phone: form.value.phone || undefined,
+            fax_number: form.value.fax_number || undefined,
 
             tax_rate: Number(form.value.tax_rate),
             invoice_start_number: Number(form.value.invoice_start_number),
@@ -188,6 +191,11 @@ function removeEmployee(index: number) {
                                 <v-col cols="6">
                                     <v-text-field v-model="form.phone" label="Business Phone"
                                         prepend-inner-icon="mdi-phone-outline" variant="outlined"
+                                        density="comfortable"></v-text-field>
+                                </v-col>
+                                <v-col cols="6">
+                                    <v-text-field v-model="form.fax_number" label="Fax Number"
+                                        prepend-inner-icon="mdi-fax" variant="outlined"
                                         density="comfortable"></v-text-field>
                                 </v-col>
                             </v-row>

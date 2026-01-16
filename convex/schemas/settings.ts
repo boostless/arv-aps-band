@@ -10,6 +10,7 @@ export const settingsFields = {
 
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
+    fax_number: v.optional(v.string()),
 
     // 2. Financials
     tax_rate: v.number(),         // e.g., 21 for 21%

@@ -100,50 +100,100 @@ export const generatePdfAction = action({
                 end: invoice.end_date
             });
 
-            // D. Prepare Line Items for PDF
-            // Show all items individually with their actual amounts
-            const pdfLineItems = breakdown.lineItems.map(item => ({
-                label: item.label,
-                total: (item.amount / 100).toFixed(2)
-            }));
+            // D. Fetch customer details
+            const customerData = invoice.customer_id 
+                ? await ctx.runQuery(api.customers.get, { id: invoice.customer_id })
+                : null;
+            const customer = customerData?.customer;
 
-            // E. Prepare Template Data
+            // E. Prepare Line Items for PDF with full details
+            const pdfLineItems = breakdown.lineItems.map((item, index) => {
+                const subtotal = item.amount;
+                const taxAmount = Math.round(subtotal * (settings.tax_rate / 100));
+                const totalWithTax = subtotal + taxAmount;
+
+                return {
+                    eil_nr: index + 1,                           // Line number
+                    pavadinimas: item.label,                     // Item name
+                    vnt: 'vnt',                                  // Unit (you may want to add this to item)
+                    kiekis: item.quantity.toString(),            // Quantity
+                    kaina: (item.price / 100).toFixed(2),        // Price per unit
+                    suma: (subtotal / 100).toFixed(2),           // Amount without VAT
+                    suma_be_pvm: (subtotal / 100).toFixed(2),    // Amount without VAT
+                    suma_pvm: (taxAmount / 100).toFixed(2),      // VAT amount
+                    is_viso: (totalWithTax / 100).toFixed(2)     // Total with VAT
+                };
+            });
+
+            // F. Calculate totals
+            const subtotal = invoice.amount - invoice.tax_amount;
+            const taxAmount = invoice.tax_amount;
+            const total = invoice.amount;
+
+            // G. Get order details for period and location
+            const order = await ctx.runQuery(api.orders.get, { id: invoice.order_id });
+
+            // H. Prepare Template Data with all required fields
             const templateData = {
-                invoice_number: invoice.invoice_number,
-                date: new Date(invoice.start_date).toLocaleDateString('lt-LT'),
-                due_date: new Date(invoice.due_date || Date.now()).toLocaleDateString('lt-LT'),
-                customer_name: invoice.customer_name,
-                customer_address: invoice.customer_address,
-                customer_vat: invoice.customer_vat || "",
-                seller_name: invoice.settings?.business_name,
-                seller_address: invoice.settings?.address,
-                seller_code: invoice.settings?.company_code,
-                seller_vat: invoice.settings?.vat_code,
-                seller_bank: invoice.settings?.banks?.[0]?.name,
-                seller_iban: invoice.settings?.banks?.[0]?.iban,
-                items: pdfLineItems, // Grouped items
-                subtotal: ((invoice.amount - invoice.tax_amount) / 100).toFixed(2),
-                tax: (invoice.tax_amount / 100).toFixed(2),
-                total: (invoice.amount / 100).toFixed(2),
-                created_by: invoice.created_by
+                // Business Information
+                seller_name: settings.business_name,
+                seller_address: settings.address,
+                seller_phone: settings.phone || '',
+                seller_fax: settings.fax_number || '',
+                seller_imones_kodas: settings.company_code,      // Company code
+                seller_pvm_kodas: settings.vat_code || '',       // VAT code
+                
+                // All bank accounts
+                banks: settings.banks || [],
+                seller_bank_1_name: settings.banks?.[0]?.name || '',
+                seller_bank_1_iban: settings.banks?.[0]?.iban || '',
+                seller_bank_2_name: settings.banks?.[1]?.name || '',
+                seller_bank_2_iban: settings.banks?.[1]?.iban || '',
+
+                // Customer Information
+                customer_name: customer?.label || invoice.customer_name,
+                customer_address: customer?.address || invoice.customer_address,
+                customer_imones_kodas: customer?.company_code || '',  // Company code
+                customer_pvm_kodas: customer?.vat_code || invoice.customer_vat || '',  // VAT code
+
+                // Invoice Info
+                invoice_number: invoice.invoice_number.toString(),
+                israsymo_data: new Date(invoice.start_date).toLocaleDateString('lt-LT'),  // Issue date
+                apmoketi_iki: new Date(invoice.due_date || Date.now()).toLocaleDateString('lt-LT'),  // Payment due date
+
+                // Line Items
+                items: pdfLineItems,
+
+                // Totals
+                suma_be_pvm: (subtotal / 100).toFixed(2),        // Total without VAT
+                suma_pvm: (taxAmount / 100).toFixed(2),          // Total VAT
+                is_viso: (total / 100).toFixed(2),               // Grand total
+
+                // Additional Info
+                saskaitos_periodas: `${new Date(invoice.start_date).toLocaleDateString('lt-LT')} - ${new Date(invoice.end_date).toLocaleDateString('lt-LT')}`,  // Invoice period
+                objekto_adresas: customer?.address || invoice.customer_address || '',  // Object address
+                created_by: invoice.created_by || '',             // Who created invoice
+                
+                // Amount in words (Lithuanian)
+                suma_zodziais: numberToLithuanianWords(total)
             };
 
-            // F. Fetch & Fill Template
+            // I. Fetch & Fill Template
             const templateUrl = await ctx.storage.getUrl(templateId);
             if (!templateUrl) throw new Error("Template file URL is invalid");
 
             const templateRes = await fetch(templateUrl);
             const filledDocx = await fillTemplate(await templateRes.arrayBuffer(), templateData);
 
-            // G. Convert to PDF
+            // J. Convert to PDF
             const pdfBuffer = await convertToPdf(filledDocx, args.gotenbergUrl);
 
-            // H. Save PDF to Storage
+            // K. Save PDF to Storage
             const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
             const storageId = await ctx.storage.store(pdfBlob);
             const publicUrl = await ctx.storage.getUrl(storageId);
 
-            // I. ✅ SAVE RESULT TO DB (Success)
+            // L. ✅ SAVE RESULT TO DB (Success)
             await ctx.runMutation(internal.documents.savePdfUrl, {
                 invoiceId: args.invoiceId,
                 url: publicUrl!,
@@ -152,7 +202,7 @@ export const generatePdfAction = action({
 
         } catch (err: any) {
             console.error("PDF Generation Error:", err);
-            // J. ✅ SAVE FAILURE TO DB
+            // M. ✅ SAVE FAILURE TO DB
             await ctx.runMutation(internal.documents.savePdfUrl, {
                 invoiceId: args.invoiceId,
                 url: "",
@@ -294,7 +344,7 @@ async function generateInvoicePdfLogic(ctx: any, invoiceId: any, gotenbergUrl: s
     // We need to know: Type ID -> { key: "service", label: "Paslauga" }
     const allTypes = await ctx.db.query("product_types").collect();
     const typeMap = new Map();
-    allTypes.forEach(t => typeMap.set(t._id, t));
+    allTypes.forEach((t: any) => typeMap.set(t._id, t));
 
     // 3. Fetch Products to find their Type
     // We need to know: Product ID -> Type Info
@@ -409,6 +459,96 @@ async function generateInvoicePdfLogic(ctx: any, invoiceId: any, gotenbergUrl: s
 // ----------------------------------------------------------------------
 // 4. UTILS (Docx & Gotenberg)
 // ----------------------------------------------------------------------
+
+function numberToLithuanianWords(cents: number): string {
+    const euros = Math.floor(cents / 100);
+    const centsPart = cents % 100;
+
+    const ones = ['', 'vienas', 'du', 'trys', 'keturi', 'penki', 'šeši', 'septyni', 'aštuoni', 'devyni'];
+    const teens = ['dešimt', 'vienuolika', 'dvylika', 'trylika', 'keturiolika', 'penkiolika', 
+                   'šešiolika', 'septyniolika', 'aštuoniolika', 'devyniolika'];
+    const tens = ['', '', 'dvidešimt', 'trisdešimt', 'keturiasdešimt', 'penkiasdešimt', 
+                  'šešiasdešimt', 'septyniasdešimt', 'aštuoniasdešimt', 'devyniasdešimt'];
+    const hundreds = ['', 'vienas šimtas', 'du šimtai', 'trys šimtai', 'keturi šimtai', 
+                      'penki šimtai', 'šeši šimtai', 'septyni šimtai', 'aštuoni šimtai', 'devyni šimtai'];
+
+    function convertUpTo999(num: number): string {
+        if (num === 0) return '';
+        
+        const h = Math.floor(num / 100);
+        const remainder = num % 100;
+        const t = Math.floor(remainder / 10);
+        const o = remainder % 10;
+
+        let result = '';
+        
+        if (h > 0) {
+            result += hundreds[h];
+        }
+        
+        if (remainder >= 10 && remainder < 20) {
+            result += (result ? ' ' : '') + teens[remainder - 10];
+        } else {
+            if (t > 0) {
+                result += (result ? ' ' : '') + tens[t];
+            }
+            if (o > 0) {
+                result += (result ? ' ' : '') + ones[o];
+            }
+        }
+        
+        return result;
+    }
+
+    function getEuroWord(n: number): string {
+        if (n === 1) return 'euras';
+        if (n % 10 === 0 || n % 100 >= 11 && n % 100 <= 19) return 'eurų';
+        return 'eurai';
+    }
+
+    function getCentWord(n: number): string {
+        if (n === 1) return 'centas';
+        if (n % 10 === 0 || n % 100 >= 11 && n % 100 <= 19) return 'centų';
+        return 'centai';
+    }
+
+    let result = '';
+
+    // Handle thousands
+    const thousands = Math.floor(euros / 1000);
+    const remainder = euros % 1000;
+
+    if (thousands > 0) {
+        const thousandWords = convertUpTo999(thousands);
+        result += thousandWords;
+        
+        if (thousands === 1) {
+            result += ' tūkstantis';
+        } else if (thousands % 10 === 0 || thousands % 100 >= 11 && thousands % 100 <= 19) {
+            result += ' tūkstančių';
+        } else {
+            result += ' tūkstančiai';
+        }
+    }
+
+    if (remainder > 0 || thousands === 0) {
+        const remainderWords = convertUpTo999(remainder);
+        if (remainderWords) {
+            result += (result ? ' ' : '') + remainderWords;
+        } else if (euros === 0) {
+            result = 'nulis';
+        }
+    }
+
+    result += ' ' + getEuroWord(euros);
+
+    // Add cents
+    if (centsPart > 0) {
+        result += ' ' + centsPart.toString().padStart(2, '0') + ' ' + getCentWord(centsPart);
+    }
+
+    return result.charAt(0).toUpperCase() + result.slice(1);
+}
 
 async function fillTemplate(templateBuffer: ArrayBuffer, data: any) {
     const zip = new PizZip(templateBuffer);
