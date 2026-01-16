@@ -1,277 +1,505 @@
 <!DOCTYPE html>
 <html lang="lt">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sąskaita Faktūra Nr. {{invoice_number}}</title>
+
     <style>
+        /* =========================
+       A4 + Gotenberg/PDF printing
+       ========================= */
+        @page {
+            size: A4;
+            margin: 14mm 14mm 16mm 14mm;
+            /* top right bottom left */
+        }
+
+        html,
+        body {
+            height: 100%;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
-        
+
+        :root {
+            --ink: #111827;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --soft: #f9fafb;
+            --accent: #2563eb;
+        }
+
         body {
+            margin: 0;
+            padding: 0;
+            /* use @page margin */
             font-family: Arial, sans-serif;
-            font-size: 11pt;
-            line-height: 1.4;
-            color: #000;
-            padding: 40px;
+            font-size: 10.5pt;
+            line-height: 1.45;
+            color: var(--ink);
+            background: #fff;
         }
-        
-        .header {
+
+        /* Wrapper constrained to A4 printable width (minus @page margins) */
+        .page {
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Avoid ugly page breaks */
+        .no-break {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .break-before {
+            break-before: page;
+            page-break-before: always;
+        }
+
+        .break-after {
+            break-after: page;
+            page-break-after: always;
+        }
+
+        /* =========================
+       Header
+       ========================= */
+        .topbar {
             display: flex;
+            align-items: flex-start;
             justify-content: space-between;
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #333;
+            gap: 18px;
+            padding-bottom: 10mm;
+            border-bottom: 2px solid var(--ink);
+            margin-bottom: 6mm;
         }
-        
-        .company-info {
+
+        .seller {
             flex: 1;
+            min-width: 0;
         }
-        
-        .invoice-title {
-            flex: 1;
+
+        .title {
             text-align: right;
+            min-width: 80mm;
         }
-        
-        .invoice-title h1 {
-            font-size: 28pt;
-            font-weight: bold;
-            color: #1976d2;
-            margin-bottom: 5px;
-        }
-        
-        .invoice-title .invoice-number {
-            font-size: 18pt;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .section-title {
-            font-size: 9pt;
-            color: #666;
+
+        .section-label {
+            font-size: 8.8pt;
+            letter-spacing: .08em;
             text-transform: uppercase;
-            margin-bottom: 5px;
-            font-weight: bold;
+            color: var(--muted);
+            font-weight: 700;
+            margin-bottom: 2.5mm;
         }
-        
-        .company-name {
-            font-size: 16pt;
-            font-weight: bold;
-            margin-bottom: 5px;
+
+        .seller h2,
+        .buyer h2 {
+            margin: 0 0 1.5mm 0;
+            font-size: 14.5pt;
+            line-height: 1.15;
+            word-wrap: break-word;
         }
-        
-        .info-text {
-            margin-bottom: 2px;
+
+        .meta {
+            font-size: 10.2pt;
         }
-        
-        .customer-section {
-            margin: 20px 0;
+
+        .meta div {
+            margin: 1mm 0;
         }
-        
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .title h1 {
+            margin: 0 0 2mm 0;
+            font-size: 24pt;
+            line-height: 1.05;
+            letter-spacing: .2px;
+            color: var(--accent);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2.2mm 3.4mm;
+            border: 1px solid var(--line);
+            border-radius: 4mm;
+            background: var(--soft);
+            font-weight: 800;
+            font-size: 12pt;
+            margin-bottom: 2.5mm;
+            white-space: nowrap;
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: auto auto;
+            justify-content: end;
+            gap: 1mm 4mm;
+            font-size: 10.2pt;
+        }
+
+        .kv .k {
+            color: var(--muted);
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .kv .v {
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        /* =========================
+       Buyer card
+       ========================= */
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 4mm;
+            padding: 4mm 4.5mm;
+            background: #fff;
+            margin: 6mm 0 4mm;
+        }
+
+        /* =========================
+       Table
+       ========================= */
         table {
             width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--line);
+            border-radius: 4mm;
+            overflow: hidden;
+            /* helps when printing */
         }
-        
-        th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-            padding: 10px 5px;
+
+        thead {
+            display: table-header-group;
+        }
+
+        /* repeat header on new pages */
+        tfoot {
+            display: table-footer-group;
+        }
+
+        thead th {
+            background: var(--soft);
+            color: var(--muted);
+            font-weight: 700;
+            font-size: 8.8pt;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+            padding: 2.6mm 2.6mm;
+            border-bottom: 1px solid var(--line);
             text-align: left;
-            border: 1px solid #ddd;
-            font-size: 10pt;
+            white-space: nowrap;
         }
-        
-        td {
-            padding: 8px 5px;
-            border: 1px solid #ddd;
-            font-size: 10pt;
+
+        tbody td {
+            padding: 2.6mm 2.6mm;
+            border-bottom: 1px solid var(--line);
+            font-size: 10.2pt;
+            vertical-align: top;
         }
-        
+
+        /* Alternate row shading looks good in PDF */
+        tbody tr:nth-child(even) td {
+            background: #fcfcfd;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Prevent row splitting across pages */
+        tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
         .text-center {
             text-align: center;
         }
-        
+
         .text-right {
             text-align: right;
         }
-        
-        .totals-section {
+
+        .mono {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Column widths tuned for A4 */
+        .col-nr {
+            width: 10mm;
+        }
+
+        .col-unit {
+            width: 12mm;
+        }
+
+        .col-qty {
+            width: 16mm;
+        }
+
+        .col-price {
+            width: 20mm;
+        }
+
+        .col-sub {
+            width: 26mm;
+        }
+
+        .col-vat {
+            width: 22mm;
+        }
+
+        .col-total {
+            width: 24mm;
+        }
+
+        /* =========================
+       Bottom area
+       ========================= */
+        .bottom {
+            display: grid;
+            grid-template-columns: 1fr 72mm;
+            /* totals box fixed width */
+            gap: 5mm;
+            margin-top: 6mm;
+            align-items: start;
+        }
+
+        .note {
+            border: 1px dashed var(--line);
+            border-radius: 4mm;
+            padding: 4mm 4.5mm;
+            background: #fff;
+        }
+
+        .note .row {
+            margin: 1.5mm 0;
+        }
+
+        .totals {
+            border: 1px solid var(--line);
+            border-radius: 4mm;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .totals .line {
             display: flex;
             justify-content: space-between;
-            margin-top: 30px;
+            gap: 4mm;
+            padding: 3mm 3.2mm;
+            border-bottom: 1px solid var(--line);
+            font-size: 10.6pt;
         }
-        
-        .left-info {
+
+        .totals .line:last-child {
+            border-bottom: none;
+        }
+
+        .totals .label {
+            color: var(--muted);
+        }
+
+        .totals .grand {
+            background: var(--soft);
+            font-weight: 800;
+            font-size: 12.8pt;
+            padding: 3.6mm 3.2mm;
+        }
+
+        .words {
+            padding: 3mm 3.2mm;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 9.3pt;
+            line-height: 1.35;
+        }
+
+        .signatures {
+            margin-top: 4mm;
+            display: grid;
+            gap: 2mm;
+            font-size: 10.2pt;
+        }
+
+        .sig-line {
+            display: flex;
+            gap: 3mm;
+            align-items: flex-end;
+        }
+
+        .blank {
             flex: 1;
-            padding-right: 20px;
+            border-bottom: 1px solid var(--line);
+            height: 5mm;
         }
-        
-        .totals-box {
-            width: 300px;
+
+        /* If your table can be long, ensure the bottom blocks don’t split weirdly */
+        .keep-together {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
-        
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .total-row.grand-total {
-            background-color: #f5f5f5;
-            padding: 12px 15px;
-            margin-top: 5px;
-            border: none;
-            font-size: 14pt;
-            font-weight: bold;
-        }
-        
-        .bank-info {
-            margin: 15px 0;
-        }
-        
-        .bank-account {
-            margin-bottom: 10px;
-        }
-        
-        .bank-name {
-            font-weight: bold;
-        }
-        
-        .footer-info {
-            margin-top: 20px;
-            font-size: 10pt;
-        }
-        
-        .signature-line {
-            margin-top: 10px;
-            padding-top: 5px;
+
+        /* Small safety: avoid widening by long strings */
+        td,
+        th {
+            overflow-wrap: anywhere;
         }
     </style>
 </head>
+
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="company-info">
-            <div class="section-title">PARDAVĖJAS / SELLER</div>
-            <div class="company-name">{{seller_name}}</div>
-            <div class="info-text">{{seller_address}}</div>
-            <div class="info-text">
-                {{#if seller_phone}}Tel.: {{seller_phone}}{{/if}}
-                {{#if seller_fax}}, Faks: {{seller_fax}}{{/if}}
+    <div class="page">
+
+        <!-- Header -->
+        <div class="topbar no-break">
+            <div class="seller">
+                <div class="section-label">Pardavėjas / Seller</div>
+                <h2>{{seller_name}}</h2>
+                <div class="meta">
+                    <div>{{seller_address}}</div>
+                    <div class="muted">
+                        {{#if seller_phone}}Tel.: {{seller_phone}}{{/if}}
+                        {{#if seller_fax}} &nbsp;•&nbsp; Faks: {{seller_fax}}{{/if}}
+                    </div>
+                    <div class="muted">Įmonės kodas: {{seller_imones_kodas}}</div>
+                    <div class="muted">PVM kodas: {{seller_pvm_kodas}}</div>
+                </div>
             </div>
-            <div class="info-text">Įmonės kodas: {{seller_imones_kodas}}</div>
-            <div class="info-text">PVM kodas: {{seller_pvm_kodas}}</div>
-        </div>
-        
-        <div class="invoice-title">
-            <h1>SĄSKAITA FAKTŪRA</h1>
-            <div class="invoice-number">Nr. {{invoice_number}}</div>
-            <div class="info-text"><strong>Išrašymo data:</strong> {{israsymo_data}}</div>
-            <div class="info-text"><strong>Apmokėti iki:</strong> {{apmoketi_iki}}</div>
-        </div>
-    </div>
 
-    <!-- Customer Info -->
-    <div class="customer-section">
-        <div class="section-title">PIRKĖJAS / BUYER</div>
-        <div class="company-name">{{customer_name}}</div>
-        <div class="info-text">{{customer_address}}</div>
-        {{#if customer_imones_kodas}}
-        <div class="info-text">Įmonės kodas: {{customer_imones_kodas}}</div>
-        {{/if}}
-        {{#if customer_pvm_kodas}}
-        <div class="info-text">PVM kodas: {{customer_pvm_kodas}}</div>
-        {{/if}}
-    </div>
-
-    <!-- Items Table -->
-    <table>
-        <thead>
-            <tr>
-                <th class="text-center" style="width: 40px;">Eil. Nr.</th>
-                <th>Pavadinimas</th>
-                <th class="text-center" style="width: 50px;">Vnt.</th>
-                <th class="text-center" style="width: 70px;">Kiekis</th>
-                <th class="text-right" style="width: 80px;">Kaina</th>
-                <th class="text-right" style="width: 90px;">Suma be PVM</th>
-                <th class="text-right" style="width: 90px;">Suma PVM</th>
-                <th class="text-right" style="width: 100px;">Iš viso</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each items}}
-            <tr>
-                <td class="text-center">{{eil_nr}}</td>
-                <td>{{pavadinimas}}</td>
-                <td class="text-center">{{vnt}}</td>
-                <td class="text-center">{{kiekis}}</td>
-                <td class="text-right">€{{kaina}}</td>
-                <td class="text-right">€{{suma_be_pvm}}</td>
-                <td class="text-right">€{{suma_pvm}}</td>
-                <td class="text-right">€{{is_viso}}</td>
-            </tr>
-            {{/each}}
-        </tbody>
-    </table>
-
-    <!-- Totals and Additional Info -->
-    <div class="totals-section">
-        <div class="left-info">
-            <div class="bank-info">
-                <div class="section-title">Banko sąskaitos:</div>
-                {{#if seller_bank_1_name}}
-                <div class="bank-account">
-                    <div class="bank-name">{{seller_bank_1_name}}</div>
-                    <div style="font-size: 9pt;">{{seller_bank_1_iban}}</div>
+            <div class="title">
+                <h1>Sąskaita faktūra</h1>
+                <div class="badge">Nr. {{invoice_number}}</div>
+                <div class="kv">
+                    <div class="k">Išrašymo data</div>
+                    <div class="v"><strong>{{israsymo_data}}</strong></div>
+                    <div class="k">Apmokėti iki</div>
+                    <div class="v"><strong>{{apmoketi_iki}}</strong></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Buyer -->
+        <div class="card buyer no-break">
+            <div class="section-label">Pirkėjas / Buyer</div>
+            <h2>{{customer_name}}</h2>
+            <div class="meta">
+                <div>{{customer_address}}</div>
+                {{#if customer_imones_kodas}}
+                <div class="muted">Įmonės kodas: {{customer_imones_kodas}}</div>
                 {{/if}}
-                {{#if seller_bank_2_name}}
-                <div class="bank-account">
-                    <div class="bank-name">{{seller_bank_2_name}}</div>
-                    <div style="font-size: 9pt;">{{seller_bank_2_iban}}</div>
-                </div>
+                {{#if customer_pvm_kodas}}
+                <div class="muted">PVM kodas: {{customer_pvm_kodas}}</div>
                 {{/if}}
             </div>
-            
-            <div class="footer-info">
-                <div><strong>Sąskaitos periodas:</strong> {{saskaitos_periodas}}</div>
+        </div>
+
+        <!-- Items -->
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center col-nr">Nr.</th>
+                    <th>Pavadinimas</th>
+                    <th class="text-center col-unit">Vnt.</th>
+                    <th class="text-center col-qty">Kiekis</th>
+                    <th class="text-right col-price">Kaina</th>
+                    <th class="text-right col-sub">Suma be PVM</th>
+                    <th class="text-right col-vat">PVM</th>
+                    <th class="text-right col-total">Iš viso</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {{#each items}}
+                <tr>
+                    <td class="text-center mono">{{eil_nr}}</td>
+                    <td>{{pavadinimas}}</td>
+                    <td class="text-center">{{vnt}}</td>
+                    <td class="text-center mono">{{kiekis}}</td>
+                    <td class="text-right mono">€{{kaina}}</td>
+                    <td class="text-right mono">€{{suma_be_pvm}}</td>
+                    <td class="text-right mono">€{{suma_pvm}}</td>
+                    <td class="text-right mono"><strong>€{{is_viso}}</strong></td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+        <!-- Bottom -->
+        <div class="bottom keep-together">
+            <div class="note">
+                <div class="section-label">Mokėjimo informacija</div>
+
+                <div class="row"><strong>Sąskaitos periodas:</strong> {{saskaitos_periodas}}</div>
+
                 {{#if objekto_adresas}}
-                <div style="margin-top: 10px;"><strong>Objekto adresas:</strong> {{objekto_adresas}}</div>
+                <div class="row"><strong>Objekto adresas:</strong> {{objekto_adresas}}</div>
+                {{/if}}
+
+                <div style="margin-top:3.5mm;" class="section-label">Banko sąskaitos</div>
+
+                {{#if seller_bank_1_name}}
+                <div class="row">
+                    <strong>{{seller_bank_1_name}}</strong><br />
+                    <span class="muted mono">{{seller_bank_1_iban}}</span>
+                </div>
+                {{/if}}
+
+                {{#if seller_bank_2_name}}
+                <div class="row">
+                    <strong>{{seller_bank_2_name}}</strong><br />
+                    <span class="muted mono">{{seller_bank_2_iban}}</span>
+                </div>
+                {{/if}}
+
+                <div class="signatures">
+                    <div><strong>Sąskaitą išrašė:</strong> {{created_by}}</div>
+                    <div class="sig-line">
+                        <strong>Sąskaitą gavo:</strong>
+                        <span class="blank"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="totals">
+                <div class="line">
+                    <span class="label">Suma be PVM</span>
+                    <span class="mono">€{{suma_be_pvm}}</span>
+                </div>
+                <div class="line">
+                    <span class="label">Suma PVM</span>
+                    <span class="mono">€{{suma_pvm}}</span>
+                </div>
+                <div class="line grand">
+                    <span>Iš viso</span>
+                    <span class="mono">€{{is_viso}}</span>
+                </div>
+
+                {{#if suma_zodziais}}
+                <div class="words">
+                    <strong>Suma žodžiais:</strong><br />
+                    {{suma_zodziais}}
+                </div>
                 {{/if}}
             </div>
-            
-            <div class="footer-info" style="margin-top: 20px;">
-                <div><strong>Sąskaitą išrašė:</strong> {{created_by}}</div>
-                <div class="signature-line"><strong>Sąskaitą gavo:</strong> _________________</div>
-            </div>
         </div>
-        
-        <div class="totals-box">
-            <div class="total-row">
-                <span>Suma be PVM:</span>
-                <span>€{{suma_be_pvm}}</span>
-            </div>
-            <div class="total-row">
-                <span>Suma PVM:</span>
-                <span>€{{suma_pvm}}</span>
-            </div>
-            <div class="total-row grand-total">
-                <span>Iš viso:</span>
-                <span>€{{is_viso}}</span>
-            </div>
-            {{#if suma_zodziais}}
-            <div style="margin-top: 15px; font-size: 9pt; color: #666;">
-                <strong>Suma žodžiais:</strong><br>
-                {{suma_zodziais}}
-            </div>
-            {{/if}}
-        </div>
+
     </div>
 </body>
+
 </html>

@@ -95,7 +95,7 @@ export const generatePdfAction = action({
             const invoice = await ctx.runQuery(api.invoices.get, { id: args.invoiceId });
             if (!invoice) throw new Error("Invoice not found");
 
-            // C. Calculate Breakdown
+            // C. Calculate Breakdown - this already returns grouped line items
             const breakdown = await ctx.runQuery(internal.documents.calculateBreakdown, {
                 orderId: invoice.order_id,
                 start: invoice.start_date,
@@ -108,34 +108,41 @@ export const generatePdfAction = action({
                 : null;
             const customer = customerData?.customer;
 
-            // E. Prepare Line Items for PDF with full details
+            // E. Get order details
+            const order = await ctx.runQuery(api.orders.get, { id: invoice.order_id });
+            if (!order) throw new Error("Order not found");
+
+            // F. Calculate days in period for unit display
+            const days = Math.ceil((invoice.end_date - invoice.start_date) / (1000 * 60 * 60 * 24)) || 1;
+
+            // G. Prepare Line Items for PDF - breakdown.lineItems are already grouped correctly
             const pdfLineItems = breakdown.lineItems.map((item, index) => {
-                const subtotal = item.amount;
+                const subtotal = item.amount; // amount is the total without tax
                 const taxAmount = Math.round(subtotal * (settings.tax_rate / 100));
                 const totalWithTax = subtotal + taxAmount;
 
+                // Determine unit based on item type
+                const isGrouped = item.type === 'product_group';
+                const vnt = isGrouped ? (days === 1 ? 'para' : 'paros') : 'vnt';
+
                 return {
-                    eil_nr: index + 1,                           // Line number
-                    pavadinimas: item.label,                     // Item name
-                    vnt: 'vnt',                                  // Unit (you may want to add this to item)
-                    kiekis: item.quantity.toString(),            // Quantity
-                    kaina: (item.price / 100).toFixed(2),        // Price per unit
-                    suma: (subtotal / 100).toFixed(2),           // Amount without VAT
-                    suma_be_pvm: (subtotal / 100).toFixed(2),    // Amount without VAT
-                    suma_pvm: (taxAmount / 100).toFixed(2),      // VAT amount
-                    is_viso: (totalWithTax / 100).toFixed(2)     // Total with VAT
+                    eil_nr: index + 1,
+                    pavadinimas: item.label,
+                    vnt: vnt,
+                    kiekis: item.quantity.toString(),
+                    kaina: (item.price / 100).toFixed(2),
+                    suma_be_pvm: (subtotal / 100).toFixed(2),
+                    suma_pvm: (taxAmount / 100).toFixed(2),
+                    is_viso: (totalWithTax / 100).toFixed(2)
                 };
             });
 
-            // F. Calculate totals
+            // H. Calculate totals
             const subtotal = invoice.amount - invoice.tax_amount;
             const taxAmount = invoice.tax_amount;
             const total = invoice.amount;
 
-            // G. Get order details for period and location
-            const order = await ctx.runQuery(api.orders.get, { id: invoice.order_id });
-
-            // H. Prepare Template Data with all required fields
+            // I. Prepare Template Data with all required fields
             const templateData = {
                 // Business Information
                 seller_name: settings.business_name,
