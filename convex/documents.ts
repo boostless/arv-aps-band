@@ -102,6 +102,8 @@ export const generatePdfAction = action({
                 end: invoice.end_date
             });
 
+            console.log("Invoice Breakdown:", breakdown);
+
             // D. Fetch customer details
             const customerData = invoice.customer_id 
                 ? await ctx.runQuery(api.customers.get, { id: invoice.customer_id })
@@ -123,7 +125,7 @@ export const generatePdfAction = action({
 
                 // Determine unit based on item type
                 const isGrouped = item.type === 'product_group';
-                const vnt = isGrouped ? (days === 1 ? 'para' : 'paros') : 'vnt';
+                const vnt = isGrouped ? 'para' : 'vnt';
 
                 return {
                     eil_nr: index + 1,

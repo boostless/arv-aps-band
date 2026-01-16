@@ -38,8 +38,10 @@ export async function calculateInvoicePeriodCosts(
     const oneDayMs = 1000 * 60 * 60 * 24;
     const start = new Date(startDate).setHours(0, 0, 0, 0);
     const end = new Date(endDate).setHours(0, 0, 0, 0);
+    const periodDays = Math.ceil((end - start) / oneDayMs) || 1;
 
     const lineItems = [];
+    const groups: Record<string, number> = {};
 
     for (const item of items) {
         const productType = typeMap.get(item.product_type);
@@ -48,15 +50,13 @@ export async function calculateInvoicePeriodCosts(
         let lineTotal = 0;
         let effectiveQuantity = item.quantity;
 
-        // A. Fixed Items (Services/Sales)
-        // Check if the service falls within this invoice period (usually strictly once per order)
-        // Logic: If invoice start date covers the order start date, we bill services.
+        // A. Services (one-time charges)
         if (isService || order.type === 'sale') {
             if (start <= order.start_date && end >= order.start_date) {
-                lineTotal = item.quantity * item.price * (1 - (item.discount / 100));
+                lineTotal = Math.round(item.quantity * item.price * (1 - (item.discount / 100)));
             }
         }
-        // B. Rental Items
+        // B. Rental items (daily cost)
         else {
             let activeDays = 0;
             for (let d = start; d <= end; d += oneDayMs) {
@@ -65,23 +65,43 @@ export async function calculateInvoicePeriodCosts(
                     .reduce((sum: number, ret: any) => sum + ret.qty, 0);
 
                 const activeQty = Math.max(0, item.quantity - returnsBeforeToday);
-                if (activeQty > 0) activeDays += activeQty; // Accumulate "Item-Days"
+                if (activeQty > 0) activeDays += activeQty;
             }
 
-            // Cost = Total Active Item-Days * Daily Price
             const dailyPrice = item.price * (1 - (item.discount / 100));
-            lineTotal = activeDays * dailyPrice;
-            effectiveQuantity = activeDays; // For rental, quantity is item-days
+            lineTotal = Math.round(activeDays * dailyPrice);
+            effectiveQuantity = activeDays;
         }
 
         if (lineTotal > 0) {
+            if (!isService && order.type === 'rental') {
+                // Group rental products by type
+                const groupLabel = productType?.label || 'Pastoliai';
+                groups[groupLabel] = (groups[groupLabel] || 0) + lineTotal;
+            } else {
+                // Services shown individually
+                lineItems.push({
+                    label: item.label,
+                    type: productType?.key || 'service',
+                    quantity: effectiveQuantity,
+                    price: item.price,
+                    discount: item.discount || 0,
+                    amount: lineTotal
+                });
+            }
+        }
+    }
+
+    // Add grouped rental items
+    for (const [label, amount] of Object.entries(groups)) {
+        if (amount > 0) {
             lineItems.push({
-                label: item.label,
-                type: item.product_type, // 'product' or 'service'
-                quantity: effectiveQuantity,
-                price: item.price,
-                discount: item.discount || 0,
-                amount: Math.round(lineTotal)
+                label: `${label} nuoma`,
+                type: 'product_group',
+                quantity: periodDays,
+                price: Math.round(amount / periodDays),
+                discount: 0,
+                amount: amount
             });
         }
     }

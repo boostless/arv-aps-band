@@ -418,8 +418,6 @@
                     <th class="text-center col-unit">Vnt.</th>
                     <th class="text-center col-qty">Kiekis</th>
                     <th class="text-right col-price">Kaina</th>
-                    <th class="text-right col-sub">Suma be PVM</th>
-                    <th class="text-right col-vat">PVM</th>
                     <th class="text-right col-total">Iš viso</th>
                 </tr>
             </thead>
@@ -432,9 +430,7 @@
                     <td class="text-center">{{vnt}}</td>
                     <td class="text-center mono">{{kiekis}}</td>
                     <td class="text-right mono">€{{kaina}}</td>
-                    <td class="text-right mono">€{{suma_be_pvm}}</td>
-                    <td class="text-right mono">€{{suma_pvm}}</td>
-                    <td class="text-right mono"><strong>€{{is_viso}}</strong></td>
+                    <td class="text-right mono"><strong>€{{suma_be_pvm}}</strong></td>
                 </tr>
                 {{/each}}
             </tbody>
