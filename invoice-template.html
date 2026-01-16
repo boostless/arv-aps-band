@@ -13,7 +13,6 @@
         @page {
             size: A4;
             margin: 14mm 14mm 16mm 14mm;
-            /* top right bottom left */
         }
 
         html,
@@ -28,17 +27,21 @@
         }
 
         :root {
-            --ink: #111827;
-            --muted: #6b7280;
-            --line: #e5e7eb;
-            --soft: #f9fafb;
-            --accent: #2563eb;
+            --ink: #0b1220;
+            /* slightly deeper for a sharper look */
+            --muted: #667085;
+            /* modern muted gray */
+            --line: #e6e8ec;
+            /* clean divider */
+            --soft: #f6f7f9;
+            /* subtle header fill */
+            --accent: #111827;
+            /* modern: keep it monochrome */
         }
 
         body {
             margin: 0;
             padding: 0;
-            /* use @page margin */
             font-family: Arial, sans-serif;
             font-size: 10.5pt;
             line-height: 1.45;
@@ -46,7 +49,6 @@
             background: #fff;
         }
 
-        /* Wrapper constrained to A4 printable width (minus @page margins) */
         .page {
             width: 100%;
             margin: 0 auto;
@@ -58,26 +60,22 @@
             page-break-inside: avoid;
         }
 
-        .break-before {
-            break-before: page;
-            page-break-before: always;
-        }
-
-        .break-after {
-            break-after: page;
-            page-break-after: always;
+        .keep-together {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         /* =========================
-       Header
+       Header (more elegant / modern)
        ========================= */
         .topbar {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 18px;
-            padding-bottom: 10mm;
-            border-bottom: 2px solid var(--ink);
+            padding-bottom: 8mm;
+            border-bottom: 1px solid var(--line);
+            /* thinner, cleaner */
             margin-bottom: 6mm;
         }
 
@@ -92,28 +90,29 @@
         }
 
         .section-label {
-            font-size: 8.8pt;
-            letter-spacing: .08em;
+            font-size: 8.4pt;
+            letter-spacing: .12em;
             text-transform: uppercase;
             color: var(--muted);
             font-weight: 700;
-            margin-bottom: 2.5mm;
+            margin-bottom: 2mm;
         }
 
         .seller h2,
         .buyer h2 {
             margin: 0 0 1.5mm 0;
-            font-size: 14.5pt;
+            font-size: 14.2pt;
             line-height: 1.15;
             word-wrap: break-word;
+            font-weight: 700;
         }
 
         .meta {
-            font-size: 10.2pt;
+            font-size: 10.1pt;
         }
 
         .meta div {
-            margin: 1mm 0;
+            margin: .8mm 0;
         }
 
         .muted {
@@ -121,22 +120,26 @@
         }
 
         .title h1 {
-            margin: 0 0 2mm 0;
-            font-size: 24pt;
+            margin: 0 0 1.6mm 0;
+            font-size: 22.5pt;
             line-height: 1.05;
-            letter-spacing: .2px;
+            letter-spacing: .3px;
             color: var(--accent);
+            font-weight: 800;
+            text-transform: uppercase;
         }
 
+        /* No rounded corners */
         .badge {
             display: inline-block;
-            padding: 2.2mm 3.4mm;
+            padding: 2mm 3.2mm;
             border: 1px solid var(--line);
-            border-radius: 4mm;
-            background: var(--soft);
+            border-radius: 0;
+            background: #fff;
+            /* cleaner */
             font-weight: 800;
             font-size: 12pt;
-            margin-bottom: 2.5mm;
+            margin-bottom: 2.2mm;
             white-space: nowrap;
         }
 
@@ -145,7 +148,7 @@
             grid-template-columns: auto auto;
             justify-content: end;
             gap: 1mm 4mm;
-            font-size: 10.2pt;
+            font-size: 10.1pt;
         }
 
         .kv .k {
@@ -160,34 +163,32 @@
         }
 
         /* =========================
-       Buyer card
+       Buyer block (no rounded corners)
        ========================= */
         .card {
             border: 1px solid var(--line);
-            border-radius: 4mm;
+            border-radius: 0;
             padding: 4mm 4.5mm;
             background: #fff;
             margin: 6mm 0 4mm;
         }
 
         /* =========================
-       Table
+       Table (more modern + square edges)
        ========================= */
         table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
             border: 1px solid var(--line);
-            border-radius: 4mm;
+            border-radius: 0;
             overflow: hidden;
-            /* helps when printing */
         }
 
         thead {
             display: table-header-group;
         }
 
-        /* repeat header on new pages */
         tfoot {
             display: table-footer-group;
         }
@@ -196,8 +197,8 @@
             background: var(--soft);
             color: var(--muted);
             font-weight: 700;
-            font-size: 8.8pt;
-            letter-spacing: .03em;
+            font-size: 8.4pt;
+            letter-spacing: .12em;
             text-transform: uppercase;
             padding: 2.6mm 2.6mm;
             border-bottom: 1px solid var(--line);
@@ -212,16 +213,15 @@
             vertical-align: top;
         }
 
-        /* Alternate row shading looks good in PDF */
+        /* lighter zebra */
         tbody tr:nth-child(even) td {
-            background: #fcfcfd;
+            background: #fbfbfc;
         }
 
         tbody tr:last-child td {
             border-bottom: none;
         }
 
-        /* Prevent row splitting across pages */
         tr {
             break-inside: avoid;
             page-break-inside: avoid;
@@ -239,15 +239,16 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Column widths tuned for A4 */
+        /* Column widths tuned for A4 (Vnt. wider to prevent wrapping) */
         .col-nr {
             width: 10mm;
         }
 
         .col-unit {
-            width: 12mm;
+            width: 18mm;
         }
 
+        /* was 12mm -> increase */
         .col-qty {
             width: 16mm;
         }
@@ -256,33 +257,33 @@
             width: 20mm;
         }
 
-        .col-sub {
-            width: 26mm;
-        }
-
-        .col-vat {
-            width: 22mm;
-        }
-
         .col-total {
-            width: 24mm;
+            width: 28mm;
+        }
+
+        /* give totals a touch more breathing room */
+
+        /* Also ensure unit column never wraps */
+        td.col-unit,
+        th.col-unit {
+            white-space: nowrap;
         }
 
         /* =========================
-       Bottom area
+       Bottom area (square edges + clean lines)
        ========================= */
         .bottom {
             display: grid;
             grid-template-columns: 1fr 72mm;
-            /* totals box fixed width */
             gap: 5mm;
             margin-top: 6mm;
             align-items: start;
         }
 
         .note {
-            border: 1px dashed var(--line);
-            border-radius: 4mm;
+            border: 1px solid var(--line);
+            /* modern: solid, not dashed */
+            border-radius: 0;
             padding: 4mm 4.5mm;
             background: #fff;
         }
@@ -293,7 +294,7 @@
 
         .totals {
             border: 1px solid var(--line);
-            border-radius: 4mm;
+            border-radius: 0;
             overflow: hidden;
             background: #fff;
         }
@@ -349,13 +350,7 @@
             height: 5mm;
         }
 
-        /* If your table can be long, ensure the bottom blocks don’t split weirdly */
-        .keep-together {
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-
-        /* Small safety: avoid widening by long strings */
+        /* Safety: allow long product names to wrap, but keep numbers tidy */
         td,
         th {
             overflow-wrap: anywhere;
@@ -427,7 +422,7 @@
                 <tr>
                     <td class="text-center mono">{{eil_nr}}</td>
                     <td>{{pavadinimas}}</td>
-                    <td class="text-center">{{vnt}}</td>
+                    <td class="text-center col-unit">{{vnt}}</td>
                     <td class="text-center mono">{{kiekis}}</td>
                     <td class="text-right mono">€{{kaina}}</td>
                     <td class="text-right mono"><strong>€{{suma_be_pvm}}</strong></td>
