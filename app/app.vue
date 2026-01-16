@@ -6,13 +6,9 @@ const { mutate: initDefaults } = useConvexMutation(api.seed.initializeDefaults);
 
 onMounted(async () => {
   try {
-    const result = await initDefaults({});
-    if (result.created) {
-      console.log('✅ Database initialized:', result);
-    }
+    await initDefaults({});
   } catch (err) {
     // Silently fail - defaults may already exist
-    console.log('Defaults check:', err);
   }
 });
 </script>

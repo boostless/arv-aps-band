@@ -52,9 +52,9 @@ async function handleSubmit() {
 
         emit('success'); // Parent handles toast/refresh
         close();
-    } catch (err) {
-        console.error(err);
-        // You might want to emit an 'error' event or handle toast here if you inject useSnackbar
+    } catch (err: any) {
+        // Error will be shown via snackbar by parent
+        throw err;
     }
 }
 </script>

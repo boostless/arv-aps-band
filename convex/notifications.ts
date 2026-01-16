@@ -39,38 +39,7 @@ export const list = query({
     },
 });
 
-// Get unread count
-export const unreadCount = query({
-    handler: async (ctx) => {
-        const unread = await ctx.db
-            .query("notifications")
-            .withIndex("by_read", (q) => q.eq("read", false))
-            .collect();
-        return unread.length;
-    },
-});
-
-// Mark as read
-export const markAsRead = mutation({
-    args: { id: v.id("notifications") },
-    handler: async (ctx, args) => {
-        await ctx.db.patch(args.id, { read: true });
-    },
-});
-
-// Mark all as read
-export const markAllAsRead = mutation({
-    handler: async (ctx) => {
-        const unread = await ctx.db
-            .query("notifications")
-            .withIndex("by_read", (q) => q.eq("read", false))
-            .collect();
-
-        for (const notif of unread) {
-            await ctx.db.patch(notif._id, { read: true });
-        }
-    },
-});
+// Note: unreadCount, markAsRead, and markAllAsRead removed - read state now tracked in localStorage per device
 
 // Delete notification
 export const remove = mutation({

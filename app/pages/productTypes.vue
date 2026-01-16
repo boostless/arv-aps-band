@@ -30,7 +30,7 @@ const form = ref({
 
 // -- TABLE HEADERS --
 const headers = [
-    { title: 'Label', key: 'label', align: 'start' },
+    { title: 'Label', key: 'label', align: 'start' as const },
     { title: 'Key', key: 'key' }, // ✅ Changed Code to Key
     { title: 'Type', key: 'is_system' },
     {
@@ -83,7 +83,6 @@ async function handleSubmit() {
         dialog.value = false;
         showToast('Saved successfully', 'success');
     } catch (err: any) {
-        console.error(err);
         showToast(err.message || 'Operation failed', 'error');
     }
 }
@@ -95,7 +94,6 @@ async function handleDelete() {
         deleteDialog.value = false;
         showToast('Deleted successfully', 'success');
     } catch (err: any) {
-        console.error(err);
         showToast('Failed to delete: ' + err.message, 'error');
     }
 }

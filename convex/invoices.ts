@@ -29,7 +29,7 @@ export async function calculateInvoicePeriodCosts(
         .collect();
 
     // Fetch product types to identify services
-    const productTypeIds = [...new Set(items.map(item => item.product_type))];
+    const productTypeIds = [...new Set(items.map((item: any) => item.product_type))];
     const productTypes = await Promise.all(
         productTypeIds.map(id => ctx.db.get(id))
     );
@@ -114,7 +114,7 @@ export async function generateInvoiceInternal(
         .collect();
 
     // Fetch product types for grouping logic
-    const productTypeIds = [...new Set(orderItems.map(item => item.product_type))];
+    const productTypeIds = [...new Set(orderItems.map((item: any) => item.product_type))];
     const productTypes = await Promise.all(
         productTypeIds.map(id => ctx.db.get(id))
     );
@@ -382,7 +382,13 @@ export const create = mutation({
 export const updateInvoiceLineItems = mutation({
     args: {
         invoiceId: v.id("invoices"),
-        items: v.array(v.object({ /* ... same shape ... */ }))
+        items: v.array(v.object({
+            type: v.string(),
+            label: v.string(),
+            quantity: v.number(),
+            price: v.number(),
+            total: v.number()
+        }))
     },
     handler: async (ctx, args) => {
         // Recalculate total
@@ -390,7 +396,7 @@ export const updateInvoiceLineItems = mutation({
 
         await ctx.db.patch(args.invoiceId, {
             items: args.items,
-            saved_total: newTotal
+            amount: newTotal
         });
     }
 });

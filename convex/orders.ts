@@ -66,7 +66,7 @@ export const create = mutation({
                     const product = await ctx.db.get(item.product);
                     const warehouse = await ctx.db.get(item.warehouse);
                     throw new Error(
-                        `Insufficient stock for "${item.label}". Available: ${availableQty}, Requested: ${item.quantity} at ${warehouse?.name || 'warehouse'}`
+                        `Insufficient stock for "${item.label}". Available: ${availableQty}, Requested: ${item.quantity} at ${warehouse?.label || 'warehouse'}`
                     );
                 }
             }

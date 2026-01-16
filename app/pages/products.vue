@@ -41,10 +41,11 @@ const form = ref({
 // 2. Update openCreate (Reset)
 function openCreate() {
     editingId.value = null;
+    const defaultType = productTypes.value?.[0]?._id ?? '' as Id<'product_types'>;
     form.value = {
         code: '',
         label: '',
-        type: productTypes.value && productTypes.value.length > 0 ? productTypes.value[0]._id : '',
+        type: defaultType,
         unitId: '',
         priceDisplay: 0,
         dailyPriceDisplay: 0,
@@ -86,7 +87,7 @@ async function handleSubmit() {
         const payload = {
             code: form.value.code,
             label: form.value.label,
-            type: form.value.type,
+            type: form.value.type as Id<'product_types'>,
             unit: form.value.unitId as Id<'units'>,
             price: Math.round(form.value.priceDisplay * 100), // Convert Dollars -> Cents
             weight_g: form.value.weightDisplay

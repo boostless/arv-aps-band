@@ -26,7 +26,7 @@ const form = ref({
 
 // -- TABLE HEADERS --
 const headers = [
-    { title: 'Label', key: 'label', align: 'start' },
+    { title: 'Label', key: 'label', align: 'start' as const },
     { title: 'Code', key: 'code' },
     { title: 'Abbreviation', key: 'abbreviation' },
     { title: 'Type', key: 'is_system' },
@@ -81,9 +81,8 @@ async function handleSubmit() {
             });
         }
         dialog.value = false;
-    } catch (err) {
-        console.error(err as any);
-        showToast(err.message || 'Operation failed', 'error'); // Simple error handling
+    } catch (err: any) {
+        showToast(err.message || 'Operation failed', 'error');
     }
 }
 
@@ -92,9 +91,8 @@ async function handleDelete() {
     try {
         await removeUnit({ id: itemToDelete.value });
         deleteDialog.value = false;
-    } catch (err) {
-        console.error(err);
-        alert('Failed to delete: ' + err);
+    } catch (err: any) {
+        showToast('Failed to delete: ' + err.message, 'error');
     }
 }
 </script>
@@ -112,7 +110,7 @@ async function handleDelete() {
         </div>
 
         <v-card border flat>
-            <v-data-table :headers="headers" :items="units || []" :loading="isLoading.value" hover>
+            <v-data-table :headers="headers" :items="units || []" :loading="isLoading" hover>
                 <template v-slot:item.is_system="{ item }">
                     <v-chip v-if="item.is_system" color="blue-grey" size="small" variant="flat" prepend-icon="mdi-lock">
                         System
