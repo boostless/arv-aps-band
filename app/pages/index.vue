@@ -74,7 +74,7 @@ function getLogIcon(type: string) {
 
                     <v-divider></v-divider>
 
-                    <v-table density="compact">
+                    <v-table density="compact" :loading="isPending">
                         <thead>
                             <tr>
                                 <th>Nr.</th>
@@ -116,7 +116,7 @@ function getLogIcon(type: string) {
 
                     <v-divider></v-divider>
 
-                    <v-table density="compact">
+                    <v-table density="compact" :loading="isPending">
                         <thead>
                             <tr>
                                 <th>Sąskaita</th>
@@ -163,7 +163,7 @@ function getLogIcon(type: string) {
 
             <v-divider></v-divider>
 
-            <v-table density="comfortable" hover>
+            <v-table density="comfortable" hover :loading="isPending">
                 <thead>
                     <tr>
                         <th>Laikas</th>

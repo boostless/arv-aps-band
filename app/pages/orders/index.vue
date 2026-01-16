@@ -3,6 +3,8 @@ import { api } from '~~/convex/_generated/api';
 // Use the ID type for type safety if available
 import type { Id } from '~~/convex/_generated/dataModel';
 
+const router = useRouter();
+
 // -- DATA --
 const { data: orders, isPending } = useConvexQuery(api.orders.list, {});
 const { mutate: completeOrder, isPending: isCompleting } = useConvexMutation(api.orders.complete);
@@ -50,6 +52,10 @@ async function handleComplete(orderId: Id<'orders'>) {
         showToast(err.toString().replace('Error: ', ''), 'error');
     }
 }
+
+const handleClick = (event: any, { item }: any) => {
+    router.push(`/orders/${item._id}`);
+};
 </script>
 
 <template>
@@ -66,7 +72,7 @@ async function handleComplete(orderId: Id<'orders'>) {
         </div>
 
         <v-card border flat>
-            <v-data-table :headers="headers" :items="orders || []" :loading="isPending" hover density="comfortable">
+            <v-data-table :headers="headers" :items="orders || []" :loading="isPending" hover density="comfortable" @click:row="handleClick">
 
                 <template v-slot:item.contract_number="{ item }">
                     <span class="font-weight-bold text-decoration-none">
@@ -102,12 +108,6 @@ async function handleComplete(orderId: Id<'orders'>) {
                 </template>
 
                 <template v-slot:item.actions="{ item }">
-                    <v-btn icon="mdi-eye-outline" size="small" variant="text" color="primary"
-                        :to="`/orders/${item._id}`">
-                        <v-icon>mdi-eye-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">Peržūrėti užsakymą</v-tooltip>
-                    </v-btn>
-
                     <v-btn v-if="item.status == 'active' && item.type == 'rental'" icon="mdi-check-circle-outline"
                         size="small" variant="text" color="green" @click="handleComplete(item._id)"
                         :loading="isCompleting">

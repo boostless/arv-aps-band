@@ -37,9 +37,14 @@ const headers = [
     { title: 'Suma', key: 'amount', align: 'end' as const },
     { title: 'Apmokėta', key: 'paidAmount', align: 'end' as const },
     { title: 'Balansas', key: 'remainingAmount', align: 'end' as const },
-    { title: 'Statusas', key: 'status', align: 'center' as const },
-    { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Statusas', key: 'status', align: 'center' as const }
 ];
+
+const router = useRouter();
+
+const handleClick = (event: any, { item }: any) => {
+    router.push(`/invoices/${item._id}`);
+};
 </script>
 
 <template>
@@ -67,7 +72,7 @@ const headers = [
         </v-row>
 
         <v-card border flat>
-            <v-data-table :headers="headers" :items="invoices || []" :loading="isPending" hover density="comfortable">
+            <v-data-table :headers="headers" :items="invoices || []" :loading="isPending" hover density="comfortable" @click:row="handleClick">
 
                 <template v-slot:item.invoice_number="{ item }">
                     <span class="font-weight-medium">#{{ item.invoice_number }}</span>
@@ -102,14 +107,6 @@ const headers = [
                     <v-chip v-else :color="item.isOverdue ? 'error' : 'warning'" size="small" variant="tonal" label>
                         {{ item.isOverdue ? 'Vėluoja' : 'Neapmokėta' }}
                     </v-chip>
-                </template>
-
-                <template v-slot:item.actions="{ item }">
-                    <v-btn icon="mdi-eye-outline" size="small" variant="text" color="primary"
-                        :to="`/invoices/${item._id}`">
-                        <v-icon>mdi-eye-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">Peržiūrėti sąskaitą</v-tooltip>
-                    </v-btn>
                 </template>
 
                 <template v-slot:no-data>

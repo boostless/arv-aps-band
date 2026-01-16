@@ -190,8 +190,13 @@ const invoiceHeaders = [
     { title: 'Periodas', key: 'period' },
     { title: 'Suma', key: 'amount', align: 'end' as const },
     { title: 'Būsena', key: 'status', align: 'center' as const },
-    { title: 'Veiksmai', key: 'actions', align: 'end' as const },
 ];
+
+const router = useRouter();
+
+const handleClick = (event: any, { item }: any) => {
+    router.push(`/invoices/${item._id}`);
+};
 </script>
 
 <template>
@@ -286,7 +291,7 @@ const invoiceHeaders = [
                         </div>
                     </v-card-item>
 
-                    <v-data-table :items="contract.invoices || []" :headers="invoiceHeaders" density="compact">
+                    <v-data-table :items="contract.invoices || []" :headers="invoiceHeaders" density="compact" hover @click:row="handleClick">
                         <template v-slot:item.invoice_number="{ item }">
                             <span class="font-weight-medium">#{{ item.invoice_number }}</span>
                         </template>
@@ -305,13 +310,6 @@ const invoiceHeaders = [
                             <v-chip size="x-small" label :color="item.status === 'paid' ? 'green' : 'red'">
                                 {{ item.status }}
                             </v-chip>
-                        </template>
-
-                        <template v-slot:item.actions="{ item }">
-                            <v-btn icon="mdi-cash" size="x-small" variant="text" color="green"
-                                v-if="item.status !== 'paid'" @click="openPaymentDialog(item)"></v-btn>
-                            <v-btn icon="mdi-file-document-outline" size="x-small" variant="text" color="primary"
-                                :to="`/invoices/${item._id}`"></v-btn>
                         </template>
 
                         <template v-slot:no-data>

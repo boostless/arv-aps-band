@@ -109,6 +109,11 @@ const headers = [
     { title: 'Įmonės duomenys', key: 'company_code' },     // Renamed for clarity
     { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
+
+const router = useRouter();
+const handleClick = (event: any, { item }: any) => {
+    router.push(`/customers/${item._id}`);
+};
 </script>
 
 <template>
@@ -127,7 +132,7 @@ const headers = [
             class="mb-4"></v-switch>
 
         <v-card border flat>
-            <v-data-table :headers="headers" :items="customers || []" :loading="isLoading" hover>
+            <v-data-table :headers="headers" :items="customers || []" :loading="isLoading" hover @click:row="handleClick">
 
                 <template v-slot:item.contact="{ item }">
                     <div v-if="item.email" class="d-flex align-center text-caption">
@@ -147,10 +152,6 @@ const headers = [
                 </template>
 
                 <template v-slot:item.actions="{ item }">
-                    <v-btn icon="mdi-eye-outline" size="small" variant="text" color="primary"
-                        :to="`/customers/${item._id}`">
-                        <v-icon>mdi-eye-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">Peržiūrėti istoriją</v-tooltip></v-btn>
                     <v-btn icon="mdi-pencil" size="small" variant="text" color="primary"
                         @click="openEdit(item)"></v-btn>
                     <v-btn icon="mdi-archive" size="small" variant="text" color="orange"
