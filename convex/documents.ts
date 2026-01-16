@@ -2,7 +2,6 @@
 import { action, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import Handlebars from "handlebars";
 import { calculateInvoicePeriodCosts } from "./invoices";
 
 // ----------------------------------------------------------------------
@@ -21,7 +20,11 @@ export const getProductWeights = internalQuery({
             if (productId) {
                 const p = await ctx.db.get(productId);
                 if (p) {
-                    products.push({ id: idStr, weight: p.weight_g || 0 }); // Use original ID string for mapping
+                    products.push({ 
+                        id: idStr, 
+                        weight: p.weight_g || 0,
+                        price: p.price || 0 // Include product price
+                    });
                 }
             }
         }
@@ -256,50 +259,101 @@ export const generateHandoverActAction = action({
             const order = await ctx.runQuery(api.orders.get, { id: args.orderId });
             if (!order) throw new Error("Order not found");
 
-            const physicalItems = order.items.filter((i: any) => i.product_type === 'product');
+            // Get customer details - order already has customer populated
+            const customer = order.customer;
 
-            // ✅ FIX: Try 'product' AND 'product_id'
-            // We cast to string because our helper now accepts strings
-            const productIds = physicalItems.map((i: any) =>
+            // Get all order items (don't filter by product_type for handover act)
+            const orderItems = order.items || [];
+
+            // Fetch product weights
+            const productIds = orderItems.map((i: any) =>
                 (i.product || i.product_id || i._id) as string
             );
 
-            // Fetch real weights
             const productWeights = await ctx.runQuery(internal.documents.getProductWeights, {
                 productIds: productIds
             });
 
-            // Map: { "productId": 15.5 }
             const weightMap = new Map();
-            productWeights.forEach((p: any) => weightMap.set(p.id, p.weight * 0.001)); // Convert g to kg
+            const priceMap = new Map();
+            productWeights.forEach((p: any) => {
+                weightMap.set(p.id, p.weight); // Keep in grams
+                priceMap.set(p.id, p.price); // Product base price
+            });
 
             let totalWeight = 0;
+            let totalValue = 0;
+            let totalDaily = 0;
 
-            const mappedItems = physicalItems.map((i: any) => {
-                // Determine which ID was used to fetch the weight
+            const mappedItems = orderItems.map((i: any) => {
                 const idUsed = (i.product || i.product_id || i._id) as string;
-                const realWeight = weightMap.get(idUsed) || 0;
-
-                totalWeight += (realWeight * i.quantity);
+                const weightGrams = weightMap.get(idUsed) || 0;
+                const weightKg = weightGrams * 0.001; // Convert g to kg
+                const itemWeight = weightKg * (i.quantity || 0);
+                
+                // Get the product's base price (unit price) from product definition
+                const unitPrice = priceMap.get(idUsed) || i.price || 0;
+                const totalItemValue = unitPrice * (i.quantity || 0);
+                
+                // Daily rate is what's charged per day (from order item or default to unit price)
+                const dailyRate = i.daily_rate || i.price || 0;
+                const totalItemDaily = dailyRate * (i.quantity || 0);
+                
+                totalWeight += itemWeight;
+                totalValue += totalItemValue;
+                totalDaily += totalItemDaily;
 
                 return {
-                    label: i.label,
-                    qty: i.quantity,
-                    code: i.code,
-                    weight: realWeight.toFixed(2),
+                    label: i.label || i.name || "",
+                    quantity: i.quantity || 0,
+                    weight_kg: itemWeight.toFixed(2),
+                    unit_price: (unitPrice / 100).toFixed(2),
+                    total_value: (totalItemValue / 100).toFixed(2),
+                    daily_rate: (dailyRate / 100).toFixed(2),
+                    total_daily: (totalItemDaily / 100).toFixed(2),
                 };
             });
 
             const templateData = {
-                contract_number: order.contract_number,
+                // Seller Information
+                seller_name: settings.business_name,
+                seller_phone: settings.phone || '',
+                seller_fax: settings.fax_number || '',
+                work_hours: 'I – V 8:00 – 16:00', // Default, you can add to settings
+                
+                // Customer Information
+                customer_name: customer?.label || "",
+                customer_address: customer?.address || "",
+                customer_imones_kodas: customer?.company_code || "",
+                customer_pvm_kodas: customer?.vat_code || "",
+                
+                // Document Info
                 date: new Date().toLocaleDateString('lt-LT'),
-                customer_name: order.customer?.label || "",
-                customer_phone: order.customer?.phone || "",
-                notes: order.notes || "",
+                contract_number: order.contract_number || "",
+                
+                // Items
                 items: mappedItems,
-                total_items: mappedItems.length,
-                total_weight: totalWeight.toFixed(2)
+                
+                // Totals
+                total_weight: totalWeight.toFixed(2),
+                total_value_sum: (totalValue / 100).toFixed(2),
+                total_daily_sum: (totalDaily / 100).toFixed(2),
+                
+                // Additional Info
+                komplekto_kaina: (totalDaily / 100).toFixed(2),
+                created_by: order.created_by || "",
+                notes: order.notes || ""
             };
+
+            console.log("Handover Act Template Data:", {
+                itemsCount: mappedItems.length,
+                items: mappedItems,
+                totals: {
+                    weight: totalWeight,
+                    value: totalValue,
+                    daily: totalDaily
+                }
+            });
 
             // PDF Generation Logic
             const templateUrl = await ctx.storage.getUrl(settings.act_template_id);
@@ -554,22 +608,48 @@ function numberToLithuanianWords(cents: number): string {
 }
 
 // Register Handlebars helpers
-Handlebars.registerHelper('formatMoney', function(cents: number) {
-    return (cents / 100).toFixed(2);
-});
-
-Handlebars.registerHelper('formatDate', function(timestamp: number) {
-    return new Date(timestamp).toLocaleDateString('lt-LT');
-});
-
-Handlebars.registerHelper('numberToWords', function(cents: number) {
-    return numberToLithuanianWords(cents);
-});
-
 function fillHtmlTemplate(templateHtml: string, data: any): string {
-    // Compile the template with Handlebars
-    const template = Handlebars.compile(templateHtml);
-    return template(data);
+    let html = templateHtml;
+    
+    // Process {{#each array}} blocks FIRST (before variable substitution)
+    const eachRegex = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
+    html = html.replace(eachRegex, (match, arrayName, itemTemplate) => {
+        const array = data[arrayName];
+        if (!Array.isArray(array) || array.length === 0) return '';
+        
+        return array.map((item: any) => {
+            let itemHtml = itemTemplate;
+            // Replace all {{property}} in the item template
+            for (const [key, value] of Object.entries(item)) {
+                if (value !== null && value !== undefined) {
+                    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                    itemHtml = itemHtml.replace(regex, String(value));
+                }
+            }
+            return itemHtml;
+        }).join('');
+    });
+    
+    // Process {{#if variable}}...{{/if}} blocks
+    const ifRegex = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
+    html = html.replace(ifRegex, (match, varName, content) => {
+        const value = data[varName];
+        // Truthy check: show content if value exists and is not empty
+        return (value && value !== '' && value !== false && value !== 0) ? content : '';
+    });
+    
+    // Replace all remaining {{variable}} placeholders
+    for (const [key, value] of Object.entries(data)) {
+        if (value !== null && value !== undefined && !Array.isArray(value) && typeof value !== 'object') {
+            const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+            html = html.replace(regex, String(value));
+        }
+    }
+    
+    // Clean up any unmatched placeholders (optional - removes {{unknown_var}})
+    html = html.replace(/\{\{[\w_]+\}\}/g, '');
+    
+    return html;
 }
 
 async function convertHtmlToPdf(html: string, gotenbergUrl: string): Promise<ArrayBuffer> {
