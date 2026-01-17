@@ -164,7 +164,7 @@ function removeEmployee(index: number) {
             <v-row>
                 <v-col cols="12" md="8">
 
-                    <v-card title="Company Details" border flat class="mb-4">
+                    <v-card border flat class="mb-4">
                         <v-card-text>
                             <v-row dense>
                                 <v-col cols="12">

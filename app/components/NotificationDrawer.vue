@@ -11,27 +11,34 @@ const emit = defineEmits<{
 }>();
 
 const { data: notifications } = useConvexQuery(api.notifications.list, {});
-const { mutate: remove } = useConvexMutation(api.notifications.remove);
 
 const router = useRouter();
 
 // Local storage for read notifications (per device)
 const readNotifications = ref<string[]>([]);
+// Local storage for hidden notifications (per device)
+const hiddenNotifications = ref<string[]>([]);
 
 onMounted(() => {
     const stored = localStorage.getItem('readNotifications');
     if (stored) {
         readNotifications.value = JSON.parse(stored);
     }
+    const storedHidden = localStorage.getItem('hiddenNotifications');
+    if (storedHidden) {
+        hiddenNotifications.value = JSON.parse(storedHidden);
+    }
 });
 
-// Computed property to determine if notification is read locally
+// Computed property to determine if notification is read locally and filter out hidden ones
 const enrichedNotifications = computed(() => {
     if (!notifications.value) return [];
-    return notifications.value.map(notif => ({
-        ...notif,
-        isReadLocally: readNotifications.value.includes(notif._id)
-    }));
+    return notifications.value
+        .filter(notif => !hiddenNotifications.value.includes(notif._id))
+        .map(notif => ({
+            ...notif,
+            isReadLocally: readNotifications.value.includes(notif._id)
+        }));
 });
 
 // Computed unread count (for badge)
@@ -96,12 +103,13 @@ function handleClick(notif: any) {
     }
 }
 
-async function handleDelete(id: Id<'notifications'>, event: Event) {
+function handleDelete(id: Id<'notifications'>, event: Event) {
     event.stopPropagation();
-    // Remove from local storage too
-    readNotifications.value = readNotifications.value.filter(nid => nid !== id);
-    localStorage.setItem('readNotifications', JSON.stringify(readNotifications.value));
-    await remove({ id });
+    // Hide locally only (don't delete from DB)
+    if (!hiddenNotifications.value.includes(id)) {
+        hiddenNotifications.value.push(id);
+        localStorage.setItem('hiddenNotifications', JSON.stringify(hiddenNotifications.value));
+    }
 }
 
 function handleMarkAllRead() {

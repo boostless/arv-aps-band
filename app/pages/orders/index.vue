@@ -2,6 +2,7 @@
 import { api } from '~~/convex/_generated/api';
 // Use the ID type for type safety if available
 import type { Id } from '~~/convex/_generated/dataModel';
+import EUR from '~~/shared/utils/money';
 
 const router = useRouter();
 
@@ -13,10 +14,6 @@ const { trigger: showToast } = useSnackbar();
 // -- UTILS --
 function formatDate(timestamp: number) {
     return new Date(timestamp).toLocaleDateString('lt-LT');
-}
-
-function formatMoney(cents: number) {
-    return (cents / 100).toFixed(2);
 }
 
 function getStatusColor(status: string) {
@@ -102,7 +99,7 @@ const handleClick = (event: any, { item }: any) => {
 
                 <template v-slot:item.total_amount="{ item }">
                     <span class="font-weight-bold">
-                        €{{ formatMoney(item.total_amount) }}
+                        {{ EUR(item.total_amount).format() }}
                     </span>
                     <span v-if="item.type === 'rental'" class="text-caption text-medium-emphasis ml-1">/day</span>
                 </template>

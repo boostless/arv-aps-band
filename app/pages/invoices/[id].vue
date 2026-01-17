@@ -2,6 +2,8 @@
 import { api } from '~~/convex/_generated/api';
 import type { Id } from '~~/convex/_generated/dataModel';
 
+import EUR from '~~/shared/utils/money'
+
 const route = useRoute();
 const invoiceId = route.params.id as Id<'invoices'>;
 const { trigger: showToast } = useSnackbar();
@@ -36,8 +38,6 @@ function printInvoice() {
 
 // Change this to your actual Gotenberg URL (or Env variable)
 const GOTENBERG_URL = "https://gotenberg-cwogc8ggs84gsogsw4440c4g.fuksus.lt";
-// Change this to your real Storage ID for the .docx file
-const INVOICE_TEMPLATE_ID = "kg25k77d1xys2hhfe6nwccp6a17z90cg";
 
 async function handleVoid() {
     if (!confirm('Are you sure you want to VOID this invoice? This cannot be undone.')) return;

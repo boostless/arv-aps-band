@@ -86,6 +86,11 @@ const headers = [
     { title: 'Būsena', key: 'archived' },
     { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
+
+const router = useRouter();
+const handleClick = (event: any, { item }: any) => {
+    router.push(`/warehouses/${item._id}`);
+};
 </script>
 
 <template>
@@ -103,7 +108,7 @@ const headers = [
         <v-switch v-model="showArchived" label="Rodyti archyvuotus" color="primary" hide-details class="mb-4"></v-switch>
 
         <v-card border flat>
-            <v-data-table :headers="headers" :items="warehouses || []" :loading="isLoading" hover>
+            <v-data-table :headers="headers" :items="warehouses || []" :loading="isLoading" hover @click:row="handleClick">
                 <template v-slot:item.archived="{ item }">
                     <v-chip :color="item.archived ? 'grey' : 'success'" size="small" variant="flat">
                         {{ item.archived ? 'Archyvuotas' : 'Aktyvus' }}
@@ -112,8 +117,6 @@ const headers = [
 
                 <template v-slot:item.actions="{ item }">
                     <div v-if="!item.archived">
-                        <v-btn icon="mdi-package-variant-closed" size="small" variant="text" color="secondary"
-                            class="mr-2" :to="`/warehouses/${item._id}`" title="Manage Stock"></v-btn>
                         <v-btn icon="mdi-pencil" size="small" variant="text" color="primary"
                             @click="openEdit(item)"></v-btn>
                         <v-btn icon="mdi-archive" size="small" variant="text" color="orange"

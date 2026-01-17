@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { api } from '~~/convex/_generated/api';
+import EUR from '~~/shared/utils/money';
 
 const { data: invoices, isPending } = useConvexQuery(api.invoices.list, {});
 
@@ -19,11 +20,6 @@ const stats = computed(() => {
 
     return { totalDue, overdueCount };
 });
-
-// -- UTILS --
-function formatMoney(cents: number) {
-    return (cents / 100).toFixed(2);
-}
 
 function formatDate(timestamp: number) {
     return new Date(timestamp).toLocaleDateString('lt-LT');
@@ -62,7 +58,7 @@ const handleClick = (event: any, { item }: any) => {
                     <v-card-text>
                         <div class="text-caption font-weight-bold text-red-darken-4 text-uppercase">Iš viso neapmokėta
                         </div>
-                        <div class="text-h4 font-weight-bold text-red-darken-4">€{{ formatMoney(stats.totalDue) }}</div>
+                        <div class="text-h4 font-weight-bold text-red-darken-4">{{ EUR(stats.totalDue).format() }}</div>
                         <div v-if="stats.overdueCount > 0" class="text-caption text-red-darken-3 mt-1">
                             {{ stats.overdueCount }} sąskaitos vėluoja
                         </div>
@@ -83,16 +79,16 @@ const handleClick = (event: any, { item }: any) => {
                 </template>
 
                 <template v-slot:item.amount="{ item }">
-                    <span class="font-weight-bold">€{{ formatMoney(item.amount) }}</span>
+                    <span class="font-weight-bold">{{ EUR(item.amount).format() }}</span>
                 </template>
 
                 <template v-slot:item.paidAmount="{ item }">
-                    <span class="text-medium-emphasis">€{{ formatMoney(item.paidAmount) }}</span>
+                    <span class="text-medium-emphasis">{{ EUR(item.paidAmount).format() }}</span>
                 </template>
 
                 <template v-slot:item.remainingAmount="{ item }">
                     <span v-if="item.remainingAmount > 0" class="text-red font-weight-bold">
-                        €{{ formatMoney(item.remainingAmount) }}
+                        {{ EUR(item.remainingAmount).format() }}
                     </span>
                     <span v-else class="text-success text-caption font-weight-bold">APMOKĖTA</span>
                 </template>

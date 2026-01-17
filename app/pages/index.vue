@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { api } from '~~/convex/_generated/api';
 import { localeStatus } from '~~/shared/utils/localeStatus';
+import EUR from '~~/shared/utils/money';
 
 const { data: dashboard, isPending } = useConvexQuery(api.dashboard.getStats, {});
 
@@ -9,10 +10,6 @@ function formatDate(timestamp: number) {
     return new Date(timestamp).toLocaleString('lt-LT', {
         month: 'short', day: 'numeric' // Short date
     });
-}
-
-function formatMoney(cents: number) {
-    return (cents / 100).toFixed(2);
 }
 
 function getDeltaColor(delta: number) {
@@ -74,22 +71,19 @@ function getLogIcon(type: string) {
 
                     <v-divider></v-divider>
 
-                    <v-table density="compact" :loading="isPending">
+                    <v-table density="compact" :loading="isPending" hover>
                         <thead>
                             <tr>
                                 <th>Nr.</th>
                                 <th>Klientas</th>
-                                <th class="text-end">Veiksmas</th>
+                                <th class="text-right">Dienos kaina</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="order in dashboard?.activeOrders" :key="order._id">
+                            <tr v-for="order in dashboard?.activeOrders" :key="order._id" class="cursor-pointer" @click="$router.push(`/orders/${order._id}`)">
                                 <td class="font-weight-medium">#{{ order.contract_number }}</td>
                                 <td class="text-truncate" style="max-width: 150px;">{{ order.customerName }}</td>
-                                <td class="text-end">
-                                    <v-btn icon="mdi-chevron-right" size="x-small" variant="text"
-                                        :to="`/orders/${order._id}`"></v-btn>
-                                </td>
+                                <td class="text-right">{{ EUR(order.total_amount).format() }}</td>
                             </tr>
                             <tr v-if="dashboard?.activeOrders.length === 0">
                                 <td colspan="3" class="text-center text-caption text-grey py-4">
@@ -116,17 +110,16 @@ function getLogIcon(type: string) {
 
                     <v-divider></v-divider>
 
-                    <v-table density="compact" :loading="isPending">
+                    <v-table density="compact" :loading="isPending" hover>
                         <thead>
                             <tr>
                                 <th>Sąskaita</th>
                                 <th>Terminas</th>
                                 <th class="text-end">Liko mokėti</th>
-                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="inv in dashboard?.unpaidInvoices" :key="inv._id">
+                            <tr v-for="inv in dashboard?.unpaidInvoices" :key="inv._id" class="cursor-pointer" @click="$router.push(`/invoices/${inv._id}`)">
                                 <td class="font-weight-medium">#{{ inv.invoice_number }}</td>
                                 <td>
                                     <span :class="inv.isOverdue ? 'text-error font-weight-bold' : ''">
@@ -134,11 +127,7 @@ function getLogIcon(type: string) {
                                     </span>
                                 </td>
                                 <td class="text-end font-weight-bold text-error">
-                                    €{{ formatMoney(inv.remainingAmount) }}
-                                </td>
-                                <td class="text-end">
-                                    <v-btn icon="mdi-arrow-right" size="x-small" variant="text" color="primary"
-                                        :to="`/invoices/${inv._id}`"></v-btn>
+                                    {{ EUR(inv.remainingAmount).format() }}
                                 </td>
                             </tr>
                             <tr v-if="dashboard?.unpaidInvoices.length === 0">
