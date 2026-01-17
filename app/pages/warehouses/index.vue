@@ -105,10 +105,12 @@ const handleClick = (event: any, { item }: any) => {
             </v-btn>
         </div>
 
-        <v-switch v-model="showArchived" label="Rodyti archyvuotus" color="primary" hide-details class="mb-4"></v-switch>
+        <v-switch v-model="showArchived" label="Rodyti archyvuotus" color="primary" hide-details
+            class="mb-4"></v-switch>
 
         <v-card border flat>
-            <v-data-table :headers="headers" :items="warehouses || []" :loading="isLoading" hover @click:row="handleClick">
+            <v-data-table :headers="headers" :items="warehouses || []" :loading="isLoading" hover
+                @click:row="handleClick">
                 <template v-slot:item.archived="{ item }">
                     <v-chip :color="item.archived ? 'grey' : 'success'" size="small" variant="flat">
                         {{ item.archived ? 'Archyvuotas' : 'Aktyvus' }}
@@ -136,13 +138,13 @@ const handleClick = (event: any, { item }: any) => {
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense class="mt-2">
                             <v-col cols="12">
-                                <v-text-field v-model="form.label" label="Pavadinimas" placeholder="pvz. Pagrindinis sandėlis"
-                                    variant="outlined" autofocus></v-text-field>
+                                <v-text-field v-model="form.code" label="Kodas" placeholder="pvz. WH-01"
+                                    variant="outlined" :disabled="!!editingId"
+                                    hint="Unikalus identifikatorius sandėliui" persistent-hint autofocus></v-text-field>
                             </v-col>
                             <v-col cols="12">
-                                <v-text-field v-model="form.code" label="Kodas" placeholder="pvz. WH-01"
-                                    variant="outlined" :disabled="!!editingId" hint="Unikalus identifikatorius sandėliui"
-                                    persistent-hint></v-text-field>
+                                <v-text-field v-model="form.label" label="Pavadinimas"
+                                    placeholder="pvz. Pagrindinis sandėlis" variant="outlined"></v-text-field>
                             </v-col>
                         </v-row>
                     </v-form>
@@ -166,7 +168,8 @@ const handleClick = (event: any, { item }: any) => {
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn variant="text" @click="deleteDialog = false">Atšaukti</v-btn>
-                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archyvuoti</v-btn>
+                    <v-btn color="orange" variant="flat" :loading="isArchiving"
+                        @click="handleArchive">Archyvuoti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

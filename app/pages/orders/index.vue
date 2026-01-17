@@ -106,7 +106,7 @@ const handleClick = (event: any, { item }: any) => {
 
                 <template v-slot:item.actions="{ item }">
                     <v-btn v-if="item.status == 'active' && item.type == 'rental'" icon="mdi-check-circle-outline"
-                        size="small" variant="text" color="green" @click="handleComplete(item._id)"
+                        size="small" variant="text" color="green" @click.stop="handleComplete(item._id)"
                         :loading="isCompleting">
                         <v-icon>mdi-check-circle-outline</v-icon>
                         <v-tooltip activator="parent" location="top">Užbaikti ir uždaryti</v-tooltip>

@@ -96,12 +96,12 @@ async function handleAdjust() {
 
 // -- TABLE HEADERS --
 const headers = [
-    { title: 'Product', key: 'label' },
-    { title: 'SKU', key: 'code' },
-    { title: 'Quantity', key: 'quantity' },
-    { title: 'Daily Rental Price', key: 'daily_rental_price' },
-    { title: 'Unit Price', key: 'price' },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Kodas', key: 'code' },
+    { title: 'Produktas', key: 'label' },
+    { title: 'Kiekis', key: 'quantity' },
+    { title: 'Dienos nuomos kaina', key: 'daily_rental_price' },
+    { title: 'Vieneto kaina', key: 'price' },
+    { title: 'Veiksmai', key: 'actions', sortable: false, align: 'end' as const },
 ];
 </script>
 
@@ -114,12 +114,12 @@ const headers = [
 
             <div class="d-flex align-center justify-space-between">
                 <div>
-                    <h1 class="text-h4 font-weight-bold">{{ warehouse?.label || 'Loading...' }}</h1>
-                    <div class="text-subtitle-1 text-medium-emphasis">Inventory Management</div>
+                    <h1 class="text-h4 font-weight-bold">{{ warehouse?.label || 'Loading...' }} sandėlys</h1>
+                    <div class="text-subtitle-1 text-medium-emphasis">Sandėlio valdymas</div>
                 </div>
 
                 <v-btn color="primary" prepend-icon="mdi-plus" size="large" @click="openAdd">
-                    Add Stock
+                    Pridėti produktą
                 </v-btn>
             </div>
         </div>
@@ -129,9 +129,9 @@ const headers = [
                 <template v-slot:no-data>
                     <div class="pa-8 text-center">
                         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-package-variant</v-icon>
-                        <div class="text-h6 text-grey">This warehouse is empty</div>
-                        <div class="text-body-2 text-grey mb-4">Add products to start tracking inventory here.</div>
-                        <v-btn variant="outlined" color="primary" @click="openAdd">Add First Item</v-btn>
+                        <div class="text-h6 text-grey">Šis sandėlys yra tuščias</div>
+                        <div class="text-body-2 text-grey mb-4">Pridėkite produktų, kad pradėtumėte sekti inventorių čia.</div>
+                        <v-btn variant="outlined" color="primary" @click="openAdd">Pridėti produktą</v-btn>
                     </div>
                 </template>
 
@@ -150,7 +150,7 @@ const headers = [
                 <template v-slot:item.actions="{ item }">
                     <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-swap-horizontal"
                         @click="openAdjust(item)">
-                        Adjust
+                        Koreguoti
                     </v-btn>
                 </template>
             </v-data-table>
@@ -158,10 +158,10 @@ const headers = [
 
         <v-dialog v-model="addDialog" max-width="500">
             <v-card>
-                <v-card-title>Add Item to Warehouse</v-card-title>
+                <v-card-title>Pridėti produktą į sandėlį</v-card-title>
                 <v-card-text class="pt-4">
                     <v-autocomplete v-model="addForm.productId" :items="allProducts || []" item-title="label"
-                        item-value="_id" label="Search Product" placeholder="Type to search..." variant="outlined"
+                        item-value="_id" label="Ieškoti produkto" placeholder="Įveskite paieškai..." variant="outlined"
                         density="comfortable" prepend-inner-icon="mdi-magnify" autofocus>
                         <template v-slot:item="{ props, item }">
                             <v-list-item v-bind="props" :subtitle="item.raw.code"></v-list-item>
@@ -173,10 +173,10 @@ const headers = [
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="addDialog = false">Cancel</v-btn>
+                    <v-btn variant="text" @click="addDialog = false">Atšaukti</v-btn>
                     <v-btn color="primary" variant="flat" :disabled="!addForm.productId" :loading="isAdjusting"
                         @click="handleAdd">
-                        Add Item
+                        Pridėti produktą
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -184,20 +184,20 @@ const headers = [
 
         <v-dialog v-model="dialog" max-width="500">
             <v-card v-if="selectedItem">
-                <v-card-title>Adjust Stock: {{ selectedItem.label }}</v-card-title>
+                <v-card-title>Koreguoti sandėlį: {{ selectedItem.label }}</v-card-title>
                 <v-card-text class="pt-4">
-                    <v-select v-model="adjustment.reason" label="Reason"
+                    <v-select v-model="adjustment.reason" label="Priežastis"
                         :items="['purchase', 'sale', 'transfer', 'audit']" variant="outlined"
                         density="compact"></v-select>
 
-                    <v-text-field v-model.number="adjustment.delta" label="Change (+/-)" type="number"
-                        variant="outlined" autofocus hint="Use negative to remove stock" persistent-hint></v-text-field>
+                    <v-text-field v-model.number="adjustment.delta" label="Pokytis (+/-)" type="number"
+                        variant="outlined" autofocus hint="Naudokite neigiamą, kad pašalintumėte atsargas" persistent-hint></v-text-field>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+                    <v-btn variant="text" @click="dialog = false">Atšaukti</v-btn>
                     <v-btn color="primary" variant="flat" :loading="isAdjusting" @click="handleAdjust">
-                        Confirm
+                        Patvirtinti
                     </v-btn>
                 </v-card-actions>
             </v-card>

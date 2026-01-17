@@ -132,7 +132,8 @@ const handleClick = (event: any, { item }: any) => {
             class="mb-4"></v-switch>
 
         <v-card border flat>
-            <v-data-table :headers="headers" :items="customers || []" :loading="isLoading" hover @click:row="handleClick">
+            <v-data-table :headers="headers" :items="customers || []" :loading="isLoading" hover
+                @click:row="handleClick">
 
                 <template v-slot:item.contact="{ item }">
                     <div v-if="item.email" class="d-flex align-center text-caption">
@@ -153,9 +154,9 @@ const handleClick = (event: any, { item }: any) => {
 
                 <template v-slot:item.actions="{ item }">
                     <v-btn icon="mdi-pencil" size="small" variant="text" color="primary"
-                        @click="openEdit(item)"></v-btn>
+                        @click.stop="openEdit(item)"></v-btn>
                     <v-btn icon="mdi-archive" size="small" variant="text" color="orange"
-                        @click="confirmArchive(item._id)"></v-btn>
+                        @click.stop="confirmArchive(item._id)"></v-btn>
                 </template>
             </v-data-table>
         </v-card>
@@ -165,15 +166,15 @@ const handleClick = (event: any, { item }: any) => {
                 <v-card-title>{{ editingId ? 'Edit Customer' : 'New Customer' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
-                        <v-row dense class="mt-2">    
+                        <v-row dense class="mt-2">
                             <v-col cols="4">
                                 <v-text-field v-model="form.code" label="Code" variant="outlined"
-                                    :disabled="!!editingId"></v-text-field>
+                                    :disabled="!!editingId" autofocus></v-text-field>
                             </v-col>
 
                             <v-col cols="8">
-                                <v-text-field v-model="form.label" label="Customer Name" variant="outlined"
-                                    autofocus></v-text-field>
+                                <v-text-field v-model="form.label" label="Customer Name"
+                                    variant="outlined"></v-text-field>
                             </v-col>
 
                             <v-col cols="6">

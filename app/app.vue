@@ -1,5 +1,9 @@
 <script setup lang="ts">
 useHead({
+  title: 'Arvėriva - Apskaitos sistemas',
+  htmlAttrs: {
+    lang: 'lt'
+  },
   meta: [
     { name: 'robots', content: 'noindex, nofollow' },
     { name: 'googlebot', content: 'noindex, nofollow' },
