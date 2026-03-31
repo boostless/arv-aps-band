@@ -163,40 +163,40 @@ const handleClick = (event: any, { item }: any) => {
 
         <v-dialog v-model="dialog" max-width="600">
             <v-card>
-                <v-card-title>{{ editingId ? 'Edit Customer' : 'New Customer' }}</v-card-title>
+                <v-card-title>{{ editingId ? 'Redaguoti klientą' : 'Naujas klientas' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense class="mt-2">
                             <v-col cols="4">
-                                <v-text-field v-model="form.code" label="Code" variant="outlined"
+                                <v-text-field v-model="form.code" label="Sisteminis kodas" variant="outlined"
                                     :disabled="!!editingId" autofocus></v-text-field>
                             </v-col>
 
                             <v-col cols="8">
-                                <v-text-field v-model="form.label" label="Customer Name"
+                                <v-text-field v-model="form.label" label="Kliento pavadinimas"
                                     variant="outlined"></v-text-field>
                             </v-col>
 
                             <v-col cols="6">
-                                <v-text-field v-model="form.email" label="Email" prepend-inner-icon="mdi-email-outline"
+                                <v-text-field v-model="form.email" label="El. Paštas" prepend-inner-icon="mdi-email-outline"
                                     variant="outlined" density="compact"></v-text-field>
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model="form.phone" label="Phone Number"
+                                <v-text-field v-model="form.phone" label="Tel. Nr"
                                     prepend-inner-icon="mdi-phone-outline" variant="outlined"
                                     density="compact"></v-text-field>
                             </v-col>
 
                             <v-col cols="6">
-                                <v-text-field v-model="form.company_code" label="Company Code" variant="outlined"
+                                <v-text-field v-model="form.company_code" label="Įmonės kodas" variant="outlined"
                                     density="compact"></v-text-field>
                             </v-col>
                             <v-col cols="6">
-                                <v-text-field v-model="form.vat_code" label="VAT Code" variant="outlined"
+                                <v-text-field v-model="form.vat_code" label="PVM kodas" variant="outlined"
                                     density="compact"></v-text-field>
                             </v-col>
                             <v-col cols="12">
-                                <v-textarea v-model="form.address" label="Address" rows="2" variant="outlined"
+                                <v-textarea v-model="form.address" label="Adresas" rows="2" variant="outlined"
                                     density="compact"></v-textarea>
                             </v-col>
                         </v-row>
@@ -204,21 +204,21 @@ const handleClick = (event: any, { item }: any) => {
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+                    <v-btn variant="text" @click="dialog = false">Atšaukti</v-btn>
                     <v-btn color="primary" variant="flat" :loading="isCreating || isUpdating"
-                        @click="handleSubmit">Save</v-btn>
+                        @click="handleSubmit">Išsaugoti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
         <v-dialog v-model="deleteDialog" max-width="400">
             <v-card>
-                <v-card-title>Archive Customer?</v-card-title>
-                <v-card-text>Are you sure? This will hide the customer from selections.</v-card-text>
+                <v-card-title>Archyvuoti klientą?</v-card-title>
+                <v-card-text>Ar tikrai norite archyvuoti šį klientą? Tai paslėps klientą iš pasirinkimų.</v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archive</v-btn>
+                    <v-btn variant="text" @click="deleteDialog = false">Atšaukti</v-btn>
+                    <v-btn color="orange" variant="flat" :loading="isArchiving" @click="handleArchive">Archyvuoti</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

@@ -12,7 +12,6 @@ export default defineNuxtConfig({
   },
   vite: {
     plugins: [
-      // @ts-expect-error
       vuetify({ autoImport: true }),
     ],
     vue: {

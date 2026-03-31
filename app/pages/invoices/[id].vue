@@ -97,7 +97,7 @@ async function handleDownloadPdf() {
 
                 <v-chip class="ml-4 text-uppercase" size="small"
                     :color="invoice.status === 'void' ? 'grey' : (isPaid ? 'success' : 'error')" variant="flat">
-                    {{ invoice.status === 'void' ? 'VOID' : (isPaid ? 'PAID' : 'UNPAID') }}
+                    {{ invoice.status === 'void' ? 'ANULIUOTA' : (isPaid ? 'APMOKĖTA' : 'NEAPMOKĖTA') }}
                 </v-chip>
             </div>
 
@@ -110,12 +110,13 @@ async function handleDownloadPdf() {
 
                 <v-btn v-if="!isPaid && invoice.status !== 'void'" color="success" class="mr-2" prepend-icon="mdi-cash"
                     @click="payDialog = true">
-                    Record Payment
+                    Įrašyti apmokėjimą
                 </v-btn>
 
                 <v-btn v-if="invoice.status !== 'void' && !isPaid" color="error" variant="text" :loading="isVoiding"
                     @click="handleVoid">
-                    Void
+                    <v-icon start>mdi-cancel</v-icon>
+                    Anuliuoti
                 </v-btn>
             </div>
         </div>
@@ -127,12 +128,12 @@ async function handleDownloadPdf() {
                 style="top:0; left:0; pointer-events: none; z-index: 10;">
                 <div class="text-h1 font-weight-black text-grey-lighten-1"
                     style="transform: rotate(-30deg); border: 10px solid #bdbdbd; padding: 20px; opacity: 0.4;">
-                    VOID
+                    ANULIUOTA
                 </div>
             </div>
             <v-row class="mb-8">
                 <v-col cols="6">
-                    <div class="text-overline text-grey mb-1">PARDAVĖJAS / SELLER</div>
+                    <div class="text-overline text-grey mb-1">PARDAVĖJAS</div>
                     <div class="text-h5 font-weight-bold mb-2">
                         {{ invoice.settings?.business_name || 'My Company' }}
                     </div>
@@ -161,8 +162,8 @@ async function handleDownloadPdf() {
 
             <v-row class="mb-8">
                 <v-col cols="12">
-                    <div class="text-overline text-grey mb-1">PIRKĖJAS / BUYER</div>
-                    <div class="text-h6 font-weight-bold mb-1">{{ invoice.customer_name || 'Unknown Customer' }}</div>
+                    <div class="text-overline text-grey mb-1">PIRKĖJAS</div>
+                    <div class="text-h6 font-weight-bold mb-1">{{ invoice.customer_name || 'Nežinomas pirkėjas' }}</div>
                     <div class="text-body-2 text-medium-emphasis">
                         {{ invoice.customer_address }}<br>
                         <span v-if="invoice.customer?.company_code || invoice.customer_vat">
@@ -203,7 +204,7 @@ async function handleDownloadPdf() {
                     </tr>
                     <tr v-else>
                         <td colspan="8" class="py-2 text-center text-caption text-grey">
-                            No line items
+                            Nėra produktu
                         </td>
                     </tr>
                 </tbody>
@@ -254,14 +255,14 @@ async function handleDownloadPdf() {
         </v-card>
 
         <div class="mt-8 no-print">
-            <div class="text-h6 mb-2">Payments</div>
+            <div class="text-h6 mb-2">Įmokos</div>
             <v-table density="compact" class="bg-grey-lighten-5 rounded">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Method</th>
-                        <th>Note</th>
-                        <th class="text-right">Amount</th>
+                        <th>Data</th>
+                        <th>Būdas</th>
+                        <th>Užrašas</th>
+                        <th class="text-right">Suma</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -272,13 +273,13 @@ async function handleDownloadPdf() {
                         <td class="text-right font-weight-bold">€{{ formatMoney(pay.amount) }}</td>
                     </tr>
                     <tr v-if="!invoice.payments || invoice.payments.length === 0">
-                        <td colspan="4" class="text-center text-caption text-grey">No payments yet.</td>
+                        <td colspan="4" class="text-center text-caption text-grey">Nėra apmokėjimų.</td>
                     </tr>
                     <tr>
-                        <td colspan="3" class="text-right font-weight-bold">Balance Due:</td>
+                        <td colspan="3" class="text-right font-weight-bold">Liko apmokėti:</td>
                         <td class="text-right font-weight-bold"
                             :class="remainingDue > 0 ? 'text-error' : 'text-success'">
-                            €{{ formatMoney(remainingDue) }}
+                            {{ EUR(remainingDue) }}
                         </td>
                     </tr>
                 </tbody>

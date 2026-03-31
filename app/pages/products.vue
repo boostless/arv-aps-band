@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import EUR from "~~/shared/utils/money"
 import { api } from '~~/convex/_generated/api';
 import type { Id } from '~~/convex/_generated/dataModel';
 
@@ -158,11 +159,11 @@ const headers = [
         <v-card border flat>
             <v-data-table :headers="headers" :items="products || []" :loading="isLoading === undefined" hover>
                 <template v-slot:item.price="{ item }">
-                    ${{ (item.price / 100).toFixed(2) }}
+                    {{ EUR(item.price) }}
                 </template>
 
                 <template v-slot:item.daily_rental_price="{ item }">
-                    ${{ (item.daily_rental_price / 100).toFixed(2) }}
+                    {{ EUR(item.daily_rental_price) }}
                 </template>
 
                 <template v-slot:item.type="{ item }">
@@ -191,18 +192,18 @@ const headers = [
 
         <v-dialog v-model="dialog" max-width="600">
             <v-card>
-                <v-card-title>{{ editingId ? 'Edit Product' : 'New Product' }}</v-card-title>
+                <v-card-title>{{ editingId ? 'Redaguoti produktą' : 'Naujas produktas' }}</v-card-title>
                 <v-card-text>
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense class="mt-2">
                             <v-col cols="4">
-                                <v-text-field v-model="form.code" label="Kodas" variant="outlined"
-                                    density="compact"></v-text-field>
+                                <v-text-field v-model="form.code" label="Sisteminis kodas" variant="outlined"
+                                    density="compact" autofocus></v-text-field>
                             </v-col>
 
                             <v-col cols="8">
                                 <v-text-field v-model="form.label" label="Pavadinimas" variant="outlined"
-                                    density="compact" autofocus></v-text-field>
+                                    density="compact"></v-text-field>
                             </v-col>
 
                             <v-col cols="6">

@@ -138,7 +138,7 @@ const handleClick = (event: any, { item }: any) => {
                     <v-form @submit.prevent="handleSubmit">
                         <v-row dense class="mt-2">
                             <v-col cols="12">
-                                <v-text-field v-model="form.code" label="Kodas" placeholder="pvz. WH-01"
+                                <v-text-field v-model="form.code" label="Sisteminis kodas" placeholder="pvz. WH-01"
                                     variant="outlined" :disabled="!!editingId"
                                     hint="Unikalus identifikatorius sandėliui" persistent-hint autofocus></v-text-field>
                             </v-col>

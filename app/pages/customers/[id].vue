@@ -134,14 +134,14 @@ const paymentHeaders = [
 
                         <v-list-item v-if="profile.customer.company_code">
                             <template v-slot:prepend>
-                                <span class="text-caption font-weight-bold mr-3" style="width: 24px">CO</span>
+                                <span class="text-caption font-weight-bold mr-3" style="width: 32px">ĮM.K.</span>
                             </template>
                             <v-list-item-title>{{ profile.customer.company_code }}</v-list-item-title>
                         </v-list-item>
 
                         <v-list-item v-if="profile.customer.vat_code">
                             <template v-slot:prepend>
-                                <span class="text-caption font-weight-bold mr-3" style="width: 24px">VAT</span>
+                                <span class="text-caption font-weight-bold mr-3" style="width: 32px">PVM</span>
                             </template>
                             <v-list-item-title>{{ profile.customer.vat_code }}</v-list-item-title>
                         </v-list-item>

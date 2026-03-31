@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { api } from '~~/convex/_generated/api';
 import type { Id } from '~~/convex/_generated/dataModel';
+import EUR from '~~/shared/utils/money';
 
 const router = useRouter();
 const { trigger: showToast } = useSnackbar();
@@ -53,6 +54,7 @@ function onProductSelect(item: any, product: any) {
 
     // Auto-select warehouse
     if (warehouses.value && warehouses.value.length > 0) {
+        console.log('Auto-selecting warehouse for item', item);
         item.warehouseId = item.warehouseId || warehouses.value?.[0]?._id || '';
     }
 
@@ -195,15 +197,16 @@ async function handleSubmit() {
                                         variant="outlined"></v-text-field>
                                 </v-col>
                                 <v-col cols="6" md="3">
-                                    <v-text-field v-model="form.end_date" type="date" label="Pabaigos data (Pasirinktinai)"
-                                        variant="outlined" :disabled="form.type === 'sale'"></v-text-field>
+                                    <v-text-field v-model="form.end_date" type="date"
+                                        label="Pabaigos data (Pasirinktinai)" variant="outlined"
+                                        :disabled="form.type === 'sale'"></v-text-field>
                                 </v-col>
                             </v-row>
                             <v-row dense class="mt-2">
                                 <v-col cols="12" md="6">
                                     <v-text-field v-model="form.address" label="Adresas"
-                                        placeholder="Pristatymo arba paslaugos adresas"
-                                        variant="outlined" density="comfortable" hide-details
+                                        placeholder="Pristatymo arba paslaugos adresas" variant="outlined"
+                                        density="comfortable" hide-details
                                         prepend-inner-icon="mdi-map-marker"></v-text-field>
                                 </v-col>
                                 <v-col cols="12" md="6">
@@ -246,8 +249,9 @@ async function handleSubmit() {
                                     </td>
 
                                     <td>
-                                        <v-text-field v-model.number="item.quantity" type="number" variant="plain"
-                                            hide-details density="compact" min="1"></v-text-field>
+                                        {{ item }}
+                                        <v-text-field v-model.number="item.quantity" :max="item.stock" type="number"
+                                            variant="plain" hide-details density="compact" min="1"></v-text-field>
                                     </td>
 
                                     <td>
@@ -262,7 +266,7 @@ async function handleSubmit() {
                                     </td>
 
                                     <td class="text-right font-weight-bold">
-                                        €{{ (item.priceDisplay * item.quantity * (1 - item.discount / 100)).toFixed(2)
+                                        €{{ EUR(item.priceDisplay * item.quantity * (1 - item.discount / 100))
                                         }}
                                     </td>
 
@@ -287,16 +291,16 @@ async function handleSubmit() {
                         <v-card-text>
                             <div class="d-flex justify-space-between mb-2">
                                 <span>Viso</span>
-                                <span class="font-weight-medium">€{{ subtotalDisplay.toFixed(2) }}</span>
+                                <span class="font-weight-medium">€{{ EUR(subtotalDisplay) }}</span>
                             </div>
                             <div class="d-flex justify-space-between mb-4">
                                 <span>PVM ({{ settings?.tax_rate || 21 }}%)</span>
-                                <span class="font-weight-medium">€{{ (grandTotal - subtotalDisplay).toFixed(2) }}</span>
+                                <span class="font-weight-medium">€{{ EUR(grandTotal - subtotalDisplay) }}</span>
                             </div>
                             <v-divider class="mb-4"></v-divider>
                             <div class="d-flex justify-space-between text-h5 font-weight-bold">
                                 <span>Galutinė suma</span>
-                                <span>€{{ grandTotal.toFixed(2) }}</span>
+                                <span>€{{ EUR(grandTotal) }}</span>
                             </div>
                             <div v-if="form.type === 'rental'"
                                 class="text-caption text-right text-medium-emphasis mt-1">

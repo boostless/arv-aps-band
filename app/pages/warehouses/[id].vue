@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import EUR from '~~/shared/utils/money';
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '~~/convex/_generated/api';
@@ -136,11 +137,11 @@ const headers = [
                 </template>
 
                 <template v-slot:item.price="{ item }">
-                    ${{ (item.price / 100).toFixed(2) }}
+                    {{ EUR(item.price) }}
                 </template>
 
                 <template v-slot:item.daily_rental_price="{ item }">
-                    ${{ (item.daily_rental_price / 100).toFixed(2) }}
+                    {{ EUR(item.daily_rental_price) }}
                 </template>
 
                 <template v-slot:item.quantity="{ item }">

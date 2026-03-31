@@ -152,7 +152,7 @@ async function handleDelete() {
                             <v-col cols="12">
                                 <v-text-field v-model="form.key" label="Raktas (Vidinis ID)"
                                     placeholder="e.g. consumables" variant="outlined" density="compact"
-                                    :disabled="!!editingId" hint="Used for grouping logic. Cannot be changed."
+                                    :disabled="!!editingId" hint="Šio rakto nebus galima pakeisti."
                                     persistent-hint></v-text-field>
                             </v-col>
                         </v-row>

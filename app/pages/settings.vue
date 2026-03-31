@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { api } from '~~/convex/_generated/api';
 
 const { trigger: showToast } = useSnackbar();
+const router = useRouter();
+
+// Dialog state
+const showConfirmDialog = ref(false);
+const bypassRouteGuard = ref(false);
+const pendingRoute = ref<any>(null);
 
 // -- DATA --
 const { data: settings } = useConvexQuery(api.settings.get, {});
@@ -29,10 +34,13 @@ const form = ref({
     act_template_id: ''
 });
 
+// Store original settings for change detection
+const originalSettings = ref(JSON.parse(JSON.stringify(form.value)));
+
 // 2. UPDATE WATCHER (Load Data)
 watch(settings, (newVal) => {
     if (newVal) {
-        form.value = {
+        const settingsData = {
             business_name: newVal.business_name,
             company_code: newVal.company_code,
             vat_code: newVal.vat_code || '',
@@ -61,6 +69,10 @@ watch(settings, (newVal) => {
                 role: e.role || ''
             })) : []
         };
+        
+        form.value = settingsData;
+        // Store original values for change detection
+        originalSettings.value = JSON.parse(JSON.stringify(settingsData));
     }
 });
 
@@ -99,9 +111,9 @@ async function handleFileUpload(file: File, type: 'invoice' | 'act') {
 }
 
 // 3. UPDATE SAVE (Send Data)
-async function handleSave() {
-    try {
-        await saveSettings({
+async function handleSave(): Promise<void> {
+    return new Promise((resolve, reject) => {
+        saveSettings({
             business_name: form.value.business_name,
             company_code: form.value.company_code,
             vat_code: form.value.vat_code || undefined,
@@ -133,12 +145,17 @@ async function handleSave() {
                         role: e.role || undefined
                     }))
                 : undefined
+        }).then(() => {
+            showToast('Nustatymai išsaugoti', 'success');
+            // Update original settings after successful save
+            originalSettings.value = JSON.parse(JSON.stringify(form.value));
+            resolve();
+        }).catch((err: any) => {
+            console.error('Save settings error:', err);
+            showToast(err.toString().replace('Error: ', ''), 'error');
+            reject(err);
         });
-        showToast('Nustatymai išsaugoti', 'success');
-    } catch (err: any) {
-        console.error('Save settings error:', err);
-        showToast(err.toString().replace('Error: ', ''), 'error');
-    }
+    });
 }
 
 // -- ACTIONS --
@@ -153,6 +170,42 @@ function addEmployee() {
 }
 function removeEmployee(index: number) {
     form.value.employees.splice(index, 1);
+}
+
+// Detect if settings have changed
+const hasSettingsChanged = computed(() => {
+    return JSON.stringify(form.value) !== JSON.stringify(originalSettings.value);
+});
+
+// Handle navigation with unsaved changes check
+onBeforeRouteLeave((to, from) => {
+    if (bypassRouteGuard.value) {
+        bypassRouteGuard.value = false;
+        return true; // Allow navigation
+    }
+    if (hasSettingsChanged.value) {
+        pendingRoute.value = to; // Store the intended route
+        showConfirmDialog.value = true;
+        return false; // Prevent navigation
+    }
+});
+
+function confirmNavigate() {
+    showConfirmDialog.value = false;
+    bypassRouteGuard.value = true; // Set flag to allow navigation
+    if (pendingRoute.value) {
+        router.push(pendingRoute.value);
+    }
+}
+
+function cancelNavigate() {
+    showConfirmDialog.value = false;
+}
+
+function saveAndNavigate() {
+    handleSave().then(() => {
+        confirmNavigate();
+    });
 }
 </script>
 
@@ -208,6 +261,7 @@ function removeEmployee(index: number) {
                                 Pridėti banką
                             </v-btn>
                         </div>
+                        <v-card-subtitle class="px-4">Valdykite banko sąskaitas, kurios bus prieinamos sąskaitose</v-card-subtitle>
                         <v-card-text>
                             <div v-for="(bank, i) in form.banks" :key="i"
                                 class="d-flex align-start mb-4 bg-grey-lighten-5 pa-3 rounded">
@@ -229,7 +283,7 @@ function removeEmployee(index: number) {
                                     @click="removeBank(i)"></v-btn>
                             </div>
                             <div v-if="form.banks.length === 0" class="text-caption text-grey text-center">
-                                No bank accounts added.
+                                Nėra banko sąskaitų.
                             </div>
                         </v-card-text>
                     </v-card>
@@ -247,7 +301,7 @@ function removeEmployee(index: number) {
                             <div v-for="(emp, i) in form.employees" :key="i" class="d-flex align-center mb-2">
                                 <v-row dense>
                                     <v-col cols="7">
-                                        <v-text-field v-model="emp.name" label="Vardas" placeholder="Jonas Jonaitis"
+                                        <v-text-field v-model="emp.name" label="Vardas Pavardė" placeholder="Jonas Jonaitis"
                                             density="compact" variant="outlined" hide-details></v-text-field>
                                     </v-col>
                                     <v-col cols="5">
@@ -347,4 +401,29 @@ function removeEmployee(index: number) {
             </v-row>
         </v-form>
     </div>
+
+    <!-- Unsaved Changes Confirmation Dialog -->
+    <v-dialog v-model="showConfirmDialog" max-width="400">
+        <v-card>
+            <v-card-item>
+                <template v-slot:prepend>
+                    <v-icon color="warning">mdi-alert-outline</v-icon>
+                </template>
+                <v-card-title>Išsaugoti pakeitimus?</v-card-title>
+            </v-card-item>
+
+            <v-card-text>
+                Jūs turite nesaugotų pakeitimų. Ar norite juos išsaugoti prieš išeinant?
+            </v-card-text>
+
+            <v-card-actions>
+                <v-btn variant="text" color="warning" @click="confirmNavigate">
+                    Tęsti be saugojimo
+                </v-btn>
+                <v-btn variant="flat" color="primary" @click="saveAndNavigate" :loading="isSaving">
+                    Išsaugoti ir tęsti
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
